@@ -1007,6 +1007,7 @@ class AgentClient extends BaseClient {
       // Check for context compaction
       const compactionConfig = appConfig?.compaction;
       const modelName = this.options.agent?.model_parameters?.model;
+      logger.debug(`[AgentClient] Compaction check - enabled: ${compactionConfig?.enabled}, model: ${modelName}`);
       if (
         compactionConfig?.enabled &&
         modelName &&
@@ -1025,6 +1026,13 @@ class AgentClient extends BaseClient {
               model: modelName,
               config: compactionConfig,
             });
+
+            // Log token estimation before compaction check
+            const estimatedTokens = compactionService.estimateConversationTokens(
+              initialMessages,
+              this.options.agent?.instructions,
+            );
+            logger.debug(`[AgentClient] Estimated tokens: ${estimatedTokens}, shouldCompact: ${compactionService.shouldCompact(estimatedTokens)}`);
 
             const result = await compactionService.compact(
               initialMessages,
