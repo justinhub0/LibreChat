@@ -179,6 +179,14 @@ export async function createRun({
       agent.model_parameters as Record<string, unknown>,
     );
 
+    // Debug: Log compaction config being passed to agent
+    console.log(`[createRun] Agent ${agent.id} compaction config:`, {
+      enabled: agentCompaction?.enabled,
+      hasApiKey: !!agentCompaction?.apiKey,
+      baseURL: agentCompaction?.baseURL,
+      model: llmConfig.model,
+    });
+
     const agentInput: AgentInputs = {
       provider,
       reasoningKey,
