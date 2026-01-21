@@ -1,7 +1,7 @@
 {
   "name": "LibreChat",
   "version": "v0.8.2-rc3",
-  "description": "",
+  "description": "_build_20260121_2125",
   "workspaces": [
     "api",
     "client",
