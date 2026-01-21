@@ -12,7 +12,7 @@ const COMPACTION_SUPPORTED_MODELS = ['gpt-5.2'];
  */
 const DEFAULT_CONFIG: Required<TCompactionConfig> = {
   enabled: false,
-  thresholdPercent: 0.85,
+  thresholdPercent: 0.70, // Lower threshold to trigger compaction earlier
   minTokensBeforeCompaction: 10000,
   preserveInstructions: true,
   compactionPrompt: undefined,
@@ -20,11 +20,12 @@ const DEFAULT_CONFIG: Required<TCompactionConfig> = {
 
 /**
  * Model context window sizes (in tokens)
+ * Note: These should match actual model limits to trigger compaction before hitting API errors
  */
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
-  'gpt-5.2': 400000,
-  'gpt-5.2-pro': 400000,
-  'gpt-5.2-codex': 400000,
+  'gpt-5.2': 128000,
+  'gpt-5.2-pro': 128000,
+  'gpt-5.2-codex': 128000,
 };
 
 /**
@@ -46,7 +47,7 @@ function getContextWindow(model: string): number {
       return value;
     }
   }
-  return 400000; // Default for gpt-5.2
+  return 128000; // Default context window
 }
 
 /**
@@ -131,21 +132,29 @@ export class CompactionService {
    */
   shouldCompact(currentTokens: number): boolean {
     if (!this.config.enabled) {
+      logger.debug(`[CompactionService] Compaction disabled`);
       return false;
     }
 
     if (!supportsCompaction(this.model)) {
+      logger.debug(`[CompactionService] Model ${this.model} does not support compaction`);
       return false;
     }
 
     if (currentTokens < this.config.minTokensBeforeCompaction) {
+      logger.debug(`[CompactionService] Tokens ${currentTokens} below min threshold ${this.config.minTokensBeforeCompaction}`);
       return false;
     }
 
     const contextWindow = getContextWindow(this.model);
     const threshold = contextWindow * this.config.thresholdPercent;
+    const shouldCompact = currentTokens >= threshold;
 
-    return currentTokens >= threshold;
+    logger.debug(
+      `[CompactionService] Token check: ${currentTokens} tokens, context window: ${contextWindow}, threshold: ${threshold} (${this.config.thresholdPercent * 100}%), shouldCompact: ${shouldCompact}`,
+    );
+
+    return shouldCompact;
   }
 
   /**
