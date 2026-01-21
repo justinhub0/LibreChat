@@ -9,6 +9,7 @@ import type {
   TVertexAIConfig,
   TAgentsEndpoint,
   TCustomEndpoints,
+  TCompactionConfig,
   TAssistantEndpoint,
   TAnthropicEndpoint,
 } from 'librechat-data-provider';
@@ -66,6 +67,8 @@ export interface AppConfig {
   registration?: TCustomConfig['registration'];
   /** Actions configurations */
   actions?: TCustomConfig['actions'];
+  /** Compaction configuration for OpenAI Responses API */
+  compaction?: TCompactionConfig;
   /** Admin-filtered tools */
   filteredTools?: string[];
   /** Admin-included tools */
