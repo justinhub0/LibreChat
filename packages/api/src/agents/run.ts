@@ -10,9 +10,43 @@ import type {
   IState,
 } from '@librechat/agents';
 import type { IUser } from '@librechat/data-schemas';
-import type { Agent } from 'librechat-data-provider';
+import type { Agent, TCompactionConfig } from 'librechat-data-provider';
 import type * as t from '~/types';
 import { resolveHeaders, createSafeUser } from '~/utils/env';
+
+/**
+ * Build compaction config for an agent by combining app config with agent's credentials
+ */
+function buildAgentCompactionConfig(
+  appCompactionConfig: TCompactionConfig | undefined,
+  modelParameters: Record<string, unknown> | undefined,
+): { enabled: boolean; apiKey: string; baseURL?: string; thresholdPercent?: number; minTokensBeforeCompaction?: number; preserveInstructions?: boolean } | undefined {
+  if (!appCompactionConfig?.enabled) {
+    return undefined;
+  }
+
+  const apiKey =
+    (modelParameters?.apiKey as string) ||
+    process.env.OPENAI_API_KEY ||
+    '';
+
+  const baseURL =
+    (modelParameters?.configuration as Record<string, unknown>)?.baseURL as string ||
+    'https://api.openai.com/v1';
+
+  if (!apiKey) {
+    return undefined;
+  }
+
+  return {
+    enabled: true,
+    apiKey,
+    baseURL,
+    thresholdPercent: appCompactionConfig.thresholdPercent,
+    minTokensBeforeCompaction: appCompactionConfig.minTokensBeforeCompaction,
+    preserveInstructions: appCompactionConfig.preserveInstructions,
+  };
+}
 
 const customProviders = new Set([
   Providers.XAI,
@@ -71,6 +105,7 @@ export async function createRun({
   tokenCounter,
   customHandlers,
   indexTokenCountMap,
+  compactionConfig,
   streaming = true,
   streamUsage = true,
 }: {
@@ -81,6 +116,7 @@ export async function createRun({
   streamUsage?: boolean;
   requestBody?: t.RequestBody;
   user?: IUser;
+  compactionConfig?: TCompactionConfig;
 } & Pick<RunConfig, 'tokenCounter' | 'customHandlers' | 'indexTokenCountMap'>): Promise<
   Run<IState>
 > {
@@ -136,6 +172,13 @@ export async function createRun({
     }
 
     const reasoningKey = getReasoningKey(provider, llmConfig, agent.endpoint);
+
+    // Build compaction config for this agent with its credentials
+    const agentCompaction = buildAgentCompactionConfig(
+      compactionConfig,
+      agent.model_parameters as Record<string, unknown>,
+    );
+
     const agentInput: AgentInputs = {
       provider,
       reasoningKey,
@@ -146,6 +189,7 @@ export async function createRun({
       instructions: systemContent,
       maxContextTokens: agent.maxContextTokens,
       useLegacyContent: agent.useLegacyContent ?? false,
+      compaction: agentCompaction,
     };
     agentInputs.push(agentInput);
   };
