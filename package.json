@@ -8,6 +8,7 @@
     "packages/*"
   ],
   "scripts": {
+    "preinstall": "rm -rf node_modules/@librechat/agents 2>/dev/null || true",
     "update": "node config/update.js",
     "add-balance": "node config/add-balance.js",
     "set-balance": "node config/set-balance.js",
