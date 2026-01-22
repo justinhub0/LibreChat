@@ -23,9 +23,9 @@ const DEFAULT_CONFIG: Required<TCompactionConfig> = {
  * Note: These should match actual model limits to trigger compaction before hitting API errors
  */
 const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
-  'gpt-5.2': 128000,
-  'gpt-5.2-pro': 128000,
-  'gpt-5.2-codex': 128000,
+  'gpt-5.2': 400000,
+  'gpt-5.2-pro': 400000,
+  'gpt-5.2-codex': 400000,
 };
 
 /**
