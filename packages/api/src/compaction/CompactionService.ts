@@ -5,7 +5,7 @@ import type { BaseMessage } from '@langchain/core/messages';
 /**
  * Models that support context compaction via OpenAI's Responses API
  */
-const COMPACTION_SUPPORTED_MODELS = ['gpt-5.2', 'gpt-5.1', 'gpt-5'];
+const COMPACTION_SUPPORTED_MODELS = ['gpt-5.2'];
 
 /**
  * Default compaction configuration
@@ -26,11 +26,6 @@ const MODEL_CONTEXT_WINDOWS: Record<string, number> = {
   'gpt-5.2': 400000,
   'gpt-5.2-pro': 400000,
   'gpt-5.2-codex': 400000,
-  'gpt-5': 400000,
-  'gpt-5.1': 400000,
-  'gpt-5-mini': 400000,
-  'gpt-5-nano': 400000,
-  'gpt-5-pro': 400000,
 };
 
 /**
@@ -49,11 +44,9 @@ function getContextWindow(model: string): number {
   const lowerModel = model.toLowerCase();
   for (const [key, value] of Object.entries(MODEL_CONTEXT_WINDOWS)) {
     if (lowerModel.includes(key)) {
-      logger.debug(`[CompactionService] Model "${model}" matched pattern "${key}" -> context window: ${value}`);
       return value;
     }
   }
-  logger.debug(`[CompactionService] Model "${model}" did not match any pattern, using default context window: 128000`);
   return 128000; // Default context window
 }
 
