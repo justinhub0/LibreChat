@@ -453,6 +453,21 @@ class AgentClient extends BaseClient {
         assistantName: this.options?.modelLabel,
       });
 
+      // Inject videos and audios into message content (formatMessage from @librechat/agents doesn't handle these)
+      const hasVideos = Array.isArray(message.videos) && message.videos.length > 0;
+      const hasAudios = Array.isArray(message.audios) && message.audios.length > 0;
+      if ((hasVideos || hasAudios) && message.role === 'user') {
+        const mediaContent = [...(message.videos || []), ...(message.audios || [])];
+        if (typeof formattedMessage.content === 'string') {
+          formattedMessage.content = [
+            { type: ContentTypes.TEXT, text: formattedMessage.content },
+            ...mediaContent,
+          ];
+        } else if (Array.isArray(formattedMessage.content)) {
+          formattedMessage.content = [...formattedMessage.content, ...mediaContent];
+        }
+      }
+
       /** For non-latest messages, prepend file context directly to message content */
       if (message.fileContext && i !== orderedMessages.length - 1) {
         if (typeof formattedMessage.content === 'string') {
