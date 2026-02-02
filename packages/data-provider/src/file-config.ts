@@ -66,12 +66,15 @@ export const fullMimeTypesList = [
   'video/mp4',
   'video/avi',
   'video/mov',
+  'video/quicktime',
   'video/wmv',
   'video/flv',
   'video/webm',
   'video/mkv',
   'video/m4v',
+  'video/x-m4v',
   'video/3gp',
+  'video/3gpp',
   'video/ogv',
   // Audio formats
   'audio/mp3',
@@ -151,7 +154,7 @@ export const imageMimeTypes = /^image\/(jpeg|gif|png|webp|heic|heif)$/;
 export const audioMimeTypes =
   /^audio\/(mp3|mpeg|mpeg3|wav|wave|x-wav|ogg|vorbis|mp4|m4a|x-m4a|flac|x-flac|webm|aac|wma|opus)$/;
 
-export const videoMimeTypes = /^video\/(mp4|avi|mov|wmv|flv|webm|mkv|m4v|3gp|ogv)$/;
+export const videoMimeTypes = /^video\/(mp4|avi|mov|quicktime|wmv|flv|webm|mkv|m4v|x-m4v|3gp|3gpp|ogv)$/;
 
 export const defaultOCRMimeTypes = [
   imageMimeTypes,
