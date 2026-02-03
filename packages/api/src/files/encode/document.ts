@@ -134,12 +134,12 @@ export async function encodeAndFormatDocuments(
       });
       result.files.push(metadata);
     } else if (provider === Providers.OPENROUTER) {
-      // OpenRouter uses OpenAI-compatible format with data URL
+      // OpenRouter routing to Gemini: use Gemini's native inline_data format
       result.documents.push({
-        type: 'file',
-        file: {
-          filename: file.filename,
-          file_data: `data:${file.type};base64,${content}`,
+        type: 'inline_data',
+        inline_data: {
+          mime_type: file.type,
+          data: content,
         },
       });
       result.files.push(metadata);
