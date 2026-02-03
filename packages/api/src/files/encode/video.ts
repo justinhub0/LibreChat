@@ -73,17 +73,18 @@ export async function encodeAndFormatVideos(
       throw new Error(`Video validation failed: ${validation.error}`);
     }
 
-    if (
-      provider === Providers.GOOGLE ||
-      provider === Providers.VERTEXAI ||
-      provider === Providers.OPENROUTER
-    ) {
-      // Use Gemini's native media format for Google, VertexAI, and OpenRouter
-      // OpenRouter passes this format through to Gemini models correctly
+    if (provider === Providers.GOOGLE || provider === Providers.VERTEXAI) {
       result.videos.push({
         type: 'media',
         mimeType: file.type,
         data: content,
+      });
+    } else if (provider === Providers.OPENROUTER) {
+      result.videos.push({
+        type: 'video_url',
+        video_url: {
+          url: `data:${file.type};base64,${content}`,
+        },
       });
     }
 

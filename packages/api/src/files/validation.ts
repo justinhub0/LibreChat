@@ -175,13 +175,7 @@ export async function validateVideo(
   provider: Providers,
   configuredFileSizeLimit?: number,
 ): Promise<VideoValidationResult> {
-  // Apply 20MB limit for Google, VertexAI, and OpenRouter (when targeting Gemini models)
-  // OpenRouter often proxies to Gemini which has a 20MB inline video limit
-  if (
-    provider === Providers.GOOGLE ||
-    provider === Providers.VERTEXAI ||
-    provider === Providers.OPENROUTER
-  ) {
+  if (provider === Providers.GOOGLE || provider === Providers.VERTEXAI) {
     const providerLimit = mbToBytes(20);
     const effectiveLimit = configuredFileSizeLimit ?? providerLimit;
 
@@ -189,7 +183,7 @@ export async function validateVideo(
       const limitMB = Math.round(effectiveLimit / (1024 * 1024));
       return {
         isValid: false,
-        error: `Video file size (${Math.round(fileSize / (1024 * 1024))}MB) exceeds the ${limitMB}MB limit for inline video data. Consider using a shorter or lower-resolution video.`,
+        error: `Video file size (${Math.round(fileSize / (1024 * 1024))}MB) exceeds the ${limitMB}MB limit`,
       };
     }
   }
@@ -218,12 +212,7 @@ export async function validateAudio(
   provider: Providers,
   configuredFileSizeLimit?: number,
 ): Promise<AudioValidationResult> {
-  // Apply 20MB limit for Google, VertexAI, and OpenRouter
-  if (
-    provider === Providers.GOOGLE ||
-    provider === Providers.VERTEXAI ||
-    provider === Providers.OPENROUTER
-  ) {
+  if (provider === Providers.GOOGLE || provider === Providers.VERTEXAI) {
     const providerLimit = mbToBytes(20);
     const effectiveLimit = configuredFileSizeLimit ?? providerLimit;
 
