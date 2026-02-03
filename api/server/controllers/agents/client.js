@@ -465,6 +465,36 @@ class AgentClient extends BaseClient {
         }
       }
 
+      /** Inject multimodal content (image_urls, documents, videos, audios) into the message */
+      const { image_urls, documents, videos, audios } = message;
+      const hasImages = Array.isArray(image_urls) && image_urls.length > 0;
+      const hasDocuments = Array.isArray(documents) && documents.length > 0;
+      const hasVideos = Array.isArray(videos) && videos.length > 0;
+      const hasAudios = Array.isArray(audios) && audios.length > 0;
+
+      if ((hasImages || hasDocuments || hasVideos || hasAudios) && formattedMessage.role === 'user') {
+        const multimodalContent = [];
+        if (hasImages) {
+          multimodalContent.push(...image_urls);
+        }
+        if (hasDocuments) {
+          multimodalContent.push(...documents);
+        }
+        if (hasVideos) {
+          multimodalContent.push(...videos);
+        }
+        if (hasAudios) {
+          multimodalContent.push(...audios);
+        }
+
+        if (typeof formattedMessage.content === 'string') {
+          const textContent = { type: ContentTypes.TEXT, text: formattedMessage.content };
+          formattedMessage.content = [textContent, ...multimodalContent];
+        } else if (Array.isArray(formattedMessage.content)) {
+          formattedMessage.content = [...formattedMessage.content, ...multimodalContent];
+        }
+      }
+
       const needsTokenCount =
         (this.contextStrategy && !orderedMessages[i].tokenCount) || message.fileContext;
 
