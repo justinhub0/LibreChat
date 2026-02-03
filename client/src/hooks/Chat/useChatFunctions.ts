@@ -223,13 +223,17 @@ export default function useChatFunctions({
       setFiles(new Map());
       setFilesToDelete({});
     } else if (setFiles && files && files.size > 0) {
-      currentMsg.files = Array.from(files.values()).map((file) => ({
-        file_id: file.file_id,
-        filepath: file.filepath,
-        type: file.type ?? '', // Ensure type is not undefined
-        height: file.height,
-        width: file.width,
-      }));
+      // Filter to only include files that have completed uploading (progress === 1)
+      // This ensures the real server-assigned file_id is used, not the temp UUID
+      currentMsg.files = Array.from(files.values())
+        .filter((file) => file.progress === 1 && file.file_id)
+        .map((file) => ({
+          file_id: file.file_id,
+          filepath: file.filepath,
+          type: file.type ?? '', // Ensure type is not undefined
+          height: file.height,
+          width: file.width,
+        }));
       setFiles(new Map());
       setFilesToDelete({});
     }
