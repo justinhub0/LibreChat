@@ -1314,14 +1314,15 @@ class BaseClient {
 
       if (file.type.startsWith('image/')) {
         categorizedAttachments.images.push(file);
-      } else if (file.type === 'application/pdf') {
-        categorizedAttachments.documents.push(file);
-        allFiles.push(file);
       } else if (file.type.startsWith('video/')) {
         categorizedAttachments.videos.push(file);
         allFiles.push(file);
       } else if (file.type.startsWith('audio/')) {
         categorizedAttachments.audios.push(file);
+        allFiles.push(file);
+      } else {
+        // Handle all other file types as documents (PDFs, Word docs, text files, etc.)
+        categorizedAttachments.documents.push(file);
         allFiles.push(file);
       }
     }
