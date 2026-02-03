@@ -35,17 +35,22 @@ export async function encodeAndFormatDocuments(
   const encodingMethods: Record<string, StrategyFunctions> = {};
   const result: DocumentResult = { documents: [], files: [] };
 
+  // Filter for all document types (PDFs and other application/* types, plus text files)
   const documentFiles = files.filter(
-    (file) => file.type === 'application/pdf' || file.type?.startsWith('application/'),
+    (file) =>
+      file.type === 'application/pdf' ||
+      file.type?.startsWith('application/') ||
+      file.type?.startsWith('text/'),
   );
 
   if (!documentFiles.length) {
     return result;
   }
 
+  // Process all document types for providers that support documents
   const results = await Promise.allSettled(
     documentFiles.map((file) => {
-      if (file.type !== 'application/pdf' || !isDocumentSupportedProvider(provider)) {
+      if (!isDocumentSupportedProvider(provider)) {
         return Promise.resolve(null);
       }
       return getFileStream(req, file, encodingMethods, getStrategyFunctions);
@@ -68,7 +73,10 @@ export async function encodeAndFormatDocuments(
       continue;
     }
 
-    if (file.type === 'application/pdf' && isDocumentSupportedProvider(provider)) {
+    const isPdf = file.type === 'application/pdf';
+
+    // Only validate PDFs
+    if (isPdf) {
       const pdfBuffer = Buffer.from(content, 'base64');
 
       /** Extract configured file size limit from fileConfig for this endpoint */
@@ -87,8 +95,12 @@ export async function encodeAndFormatDocuments(
       if (!validation.isValid) {
         throw new Error(`PDF validation failed: ${validation.error}`);
       }
+    }
 
-      if (provider === Providers.ANTHROPIC) {
+    // Format document for the appropriate provider
+    if (provider === Providers.ANTHROPIC) {
+      // Anthropic only supports PDFs natively
+      if (isPdf) {
         const document: AnthropicDocumentBlock = {
           type: 'document',
           source: {
@@ -104,27 +116,36 @@ export async function encodeAndFormatDocuments(
         }
 
         result.documents.push(document);
-      } else if (useResponsesApi) {
-        result.documents.push({
-          type: 'input_file',
-          filename: file.filename,
-          file_data: `data:application/pdf;base64,${content}`,
-        });
-      } else if (provider === Providers.GOOGLE || provider === Providers.VERTEXAI) {
-        result.documents.push({
-          type: 'media',
-          mimeType: 'application/pdf',
-          data: content,
-        });
-      } else if (isOpenAILikeProvider(provider) && provider != Providers.AZURE) {
-        result.documents.push({
-          type: 'file',
-          file: {
-            filename: file.filename,
-            file_data: `data:application/pdf;base64,${content}`,
-          },
-        });
+        result.files.push(metadata);
       }
+    } else if (useResponsesApi) {
+      result.documents.push({
+        type: 'input_file',
+        filename: file.filename,
+        file_data: `data:${file.type};base64,${content}`,
+      });
+      result.files.push(metadata);
+    } else if (
+      provider === Providers.GOOGLE ||
+      provider === Providers.VERTEXAI ||
+      provider === Providers.OPENROUTER
+    ) {
+      // Google, Vertex, and OpenRouter (for Gemini models) use the media format
+      result.documents.push({
+        type: 'media',
+        mimeType: file.type,
+        data: content,
+      });
+      result.files.push(metadata);
+    } else if (isOpenAILikeProvider(provider) && provider != Providers.AZURE) {
+      // OpenAI and other OpenAI-like providers use the file format
+      result.documents.push({
+        type: 'file',
+        file: {
+          filename: file.filename,
+          file_data: `data:${file.type};base64,${content}`,
+        },
+      });
       result.files.push(metadata);
     }
   }
