@@ -3,7 +3,7 @@ const { EModelEndpoint, ContentTypes } = require('librechat-data-provider');
 const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/messages');
 
 /**
- * Formats a message to OpenAI Vision API payload format, including support for videos and audios.
+ * Formats a message to OpenAI Vision API payload format.
  *
  * @param {Object} params - The parameters for formatting.
  * @param {Object} params.message - The message object to format.
@@ -11,19 +11,15 @@ const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/mess
  * @param {string} [params.message.content] - The text content of the message.
  * @param {EModelEndpoint} [params.endpoint] - Identifier for specific endpoint handling
  * @param {Array<Object>} [params.image_urls] - The image_urls to attach to the message.
- * @param {Array<Object>} [params.videos] - The videos to attach to the message (Gemini media format).
- * @param {Array<Object>} [params.audios] - The audios to attach to the message (Gemini media format).
  * @returns {(Object)} - The formatted message.
  */
-const formatVisionMessage = ({ message, image_urls = [], videos = [], audios = [], endpoint }) => {
-  const mediaContent = [...videos, ...audios];
-
+const formatVisionMessage = ({ message, image_urls, endpoint }) => {
   if (endpoint === EModelEndpoint.anthropic) {
-    message.content = [...image_urls, ...mediaContent, { type: ContentTypes.TEXT, text: message.content }];
+    message.content = [...image_urls, { type: ContentTypes.TEXT, text: message.content }];
     return message;
   }
 
-  message.content = [{ type: ContentTypes.TEXT, text: message.content }, ...image_urls, ...mediaContent];
+  message.content = [{ type: ContentTypes.TEXT, text: message.content }, ...image_urls];
 
   return message;
 };
@@ -39,8 +35,6 @@ const formatVisionMessage = ({ message, image_urls = [], videos = [], audios = [
  * @param {string} [params.message.text] - The text content of the message.
  * @param {string} [params.message.content] - The content of the message.
  * @param {Array<Object>} [params.message.image_urls] - The image_urls attached to the message for Vision API.
- * @param {Array<Object>} [params.message.videos] - The videos attached to the message (Gemini media format).
- * @param {Array<Object>} [params.message.audios] - The audios attached to the message (Gemini media format).
  * @param {string} [params.userName] - The name of the user.
  * @param {string} [params.assistantName] - The name of the assistant.
  * @param {string} [params.endpoint] - Identifier for specific endpoint handling
@@ -64,17 +58,12 @@ const formatMessage = ({ message, userName, assistantName, endpoint, langChain =
     content,
   };
 
-  const { image_urls, videos, audios } = message;
-  const hasImages = Array.isArray(image_urls) && image_urls.length > 0;
-  const hasVideos = Array.isArray(videos) && videos.length > 0;
-  const hasAudios = Array.isArray(audios) && audios.length > 0;
+  const { image_urls } = message;
 
-  if ((hasImages || hasVideos || hasAudios) && role === 'user') {
+  if (Array.isArray(image_urls) && image_urls.length > 0 && role === 'user') {
     return formatVisionMessage({
       message: formattedMessage,
-      image_urls: hasImages ? image_urls : [],
-      videos: hasVideos ? videos : [],
-      audios: hasAudios ? audios : [],
+      image_urls,
       endpoint,
     });
   }
