@@ -11,15 +11,42 @@ const { HumanMessage, AIMessage, SystemMessage } = require('@langchain/core/mess
  * @param {string} [params.message.content] - The text content of the message.
  * @param {EModelEndpoint} [params.endpoint] - Identifier for specific endpoint handling
  * @param {Array<Object>} [params.image_urls] - The image_urls to attach to the message.
+ * @param {Array<Object>} [params.documents] - The documents to attach to the message.
+ * @param {Array<Object>} [params.videos] - The videos to attach to the message.
+ * @param {Array<Object>} [params.audios] - The audios to attach to the message.
  * @returns {(Object)} - The formatted message.
  */
-const formatVisionMessage = ({ message, image_urls, endpoint }) => {
+const formatVisionMessage = ({ message, image_urls, documents, videos, audios, endpoint }) => {
+  const multimodalContent = [];
+
+  // Add images
+  if (Array.isArray(image_urls) && image_urls.length > 0) {
+    multimodalContent.push(...image_urls);
+  }
+
+  // Add documents
+  if (Array.isArray(documents) && documents.length > 0) {
+    multimodalContent.push(...documents);
+  }
+
+  // Add videos
+  if (Array.isArray(videos) && videos.length > 0) {
+    multimodalContent.push(...videos);
+  }
+
+  // Add audios
+  if (Array.isArray(audios) && audios.length > 0) {
+    multimodalContent.push(...audios);
+  }
+
+  const textContent = { type: ContentTypes.TEXT, text: message.content };
+
   if (endpoint === EModelEndpoint.anthropic) {
-    message.content = [...image_urls, { type: ContentTypes.TEXT, text: message.content }];
+    message.content = [...multimodalContent, textContent];
     return message;
   }
 
-  message.content = [{ type: ContentTypes.TEXT, text: message.content }, ...image_urls];
+  message.content = [textContent, ...multimodalContent];
 
   return message;
 };
@@ -35,6 +62,9 @@ const formatVisionMessage = ({ message, image_urls, endpoint }) => {
  * @param {string} [params.message.text] - The text content of the message.
  * @param {string} [params.message.content] - The content of the message.
  * @param {Array<Object>} [params.message.image_urls] - The image_urls attached to the message for Vision API.
+ * @param {Array<Object>} [params.message.documents] - The documents attached to the message.
+ * @param {Array<Object>} [params.message.videos] - The videos attached to the message.
+ * @param {Array<Object>} [params.message.audios] - The audios attached to the message.
  * @param {string} [params.userName] - The name of the user.
  * @param {string} [params.assistantName] - The name of the assistant.
  * @param {string} [params.endpoint] - Identifier for specific endpoint handling
@@ -58,12 +88,21 @@ const formatMessage = ({ message, userName, assistantName, endpoint, langChain =
     content,
   };
 
-  const { image_urls } = message;
+  const { image_urls, documents, videos, audios } = message;
 
-  if (Array.isArray(image_urls) && image_urls.length > 0 && role === 'user') {
+  // Check if any multimodal content exists
+  const hasImages = Array.isArray(image_urls) && image_urls.length > 0;
+  const hasDocuments = Array.isArray(documents) && documents.length > 0;
+  const hasVideos = Array.isArray(videos) && videos.length > 0;
+  const hasAudios = Array.isArray(audios) && audios.length > 0;
+
+  if ((hasImages || hasDocuments || hasVideos || hasAudios) && role === 'user') {
     return formatVisionMessage({
       message: formattedMessage,
       image_urls,
+      documents,
+      videos,
+      audios,
       endpoint,
     });
   }
