@@ -64,6 +64,28 @@ function estimateTokens(content: string | unknown): number {
 }
 
 /**
+ * Convert content item to OpenAI Responses API format
+ * The Responses API uses 'input_text' and 'input_image' instead of 'text' and 'image_url'
+ */
+function convertContentItem(item: Record<string, unknown>): Record<string, unknown> {
+  if (item.type === 'text') {
+    return {
+      type: 'input_text',
+      text: item.text,
+    };
+  }
+  if (item.type === 'image_url') {
+    const imageUrl = item.image_url as Record<string, unknown>;
+    return {
+      type: 'input_image',
+      image_url: imageUrl?.url || imageUrl,
+    };
+  }
+  // Return as-is for other types
+  return item;
+}
+
+/**
  * Convert LangChain messages to OpenAI Responses API input format
  */
 function convertToResponsesInput(
@@ -82,9 +104,13 @@ function convertToResponsesInput(
       });
     } else if (Array.isArray(msg.content)) {
       // Handle complex content (text + images, etc.)
+      // Convert content types for Responses API format
+      const convertedContent = msg.content.map((item) =>
+        convertContentItem(item as Record<string, unknown>),
+      );
       input.push({
         role,
-        content: msg.content,
+        content: convertedContent,
       });
     }
   }
