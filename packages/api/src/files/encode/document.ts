@@ -134,11 +134,12 @@ export async function encodeAndFormatDocuments(
       });
       result.files.push(metadata);
     } else if (provider === Providers.OPENROUTER) {
-      // OpenRouter: use file type with URL format (matching image_url/video_url pattern)
+      // OpenRouter: use file type with file_data (OpenAI-compatible format)
       result.documents.push({
         type: 'file',
         file: {
-          url: `data:${file.type};base64,${content}`,
+          filename: file.filename,
+          file_data: `data:${file.type};base64,${content}`,
         },
       });
       result.files.push(metadata);
