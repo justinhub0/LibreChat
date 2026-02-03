@@ -134,12 +134,11 @@ export async function encodeAndFormatDocuments(
       });
       result.files.push(metadata);
     } else if (provider === Providers.OPENROUTER) {
-      // OpenRouter: use image_url format with data URL (works for all file types including PDFs)
+      // OpenRouter with Gemini: use native media format (same as Google/Vertex)
       result.documents.push({
-        type: 'image_url',
-        image_url: {
-          url: `data:${file.type};base64,${content}`,
-        },
+        type: 'media',
+        mimeType: file.type,
+        data: content,
       });
       result.files.push(metadata);
     } else if (isOpenAILikeProvider(provider) && provider != Providers.AZURE) {
