@@ -138,15 +138,17 @@ export async function encodeAndFormatDocuments(
       });
       result.files.push(metadata);
     } else if (isOpenAILikeProvider(provider) && provider != Providers.AZURE) {
-      // OpenAI and other OpenAI-like providers use the file format
-      result.documents.push({
-        type: 'file',
-        file: {
-          filename: file.filename,
-          file_data: `data:${file.type};base64,${content}`,
-        },
-      });
-      result.files.push(metadata);
+      // OpenAI only supports PDFs for document uploads
+      if (isPdf) {
+        result.documents.push({
+          type: 'file',
+          file: {
+            filename: file.filename,
+            file_data: `data:${file.type};base64,${content}`,
+          },
+        });
+        result.files.push(metadata);
+      }
     }
   }
 
