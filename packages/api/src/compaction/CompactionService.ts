@@ -51,16 +51,81 @@ function getContextWindow(model: string): number {
 }
 
 /**
+ * Fixed token cost for images (OpenAI charges based on detail level, not data size)
+ * High detail images can cost up to ~1000 tokens, we use a conservative estimate
+ */
+const IMAGE_TOKEN_ESTIMATE = 1000;
+
+/**
+ * Check if a string is base64 image data
+ */
+function isBase64ImageData(str: string): boolean {
+  return str.startsWith('data:image/') || (str.length > 1000 && /^[A-Za-z0-9+/=]+$/.test(str.slice(0, 100)));
+}
+
+/**
  * Rough token estimation (4 chars per token average)
+ * Excludes base64 image data which would massively inflate the count
  */
 function estimateTokens(content: string | unknown): number {
   if (typeof content === 'string') {
+    // Don't count base64 image data as text tokens
+    if (isBase64ImageData(content)) {
+      return IMAGE_TOKEN_ESTIMATE;
+    }
     return Math.ceil(content.length / 4);
   }
+  if (Array.isArray(content)) {
+    // Handle array content (like messages with images)
+    let total = 0;
+    for (const item of content) {
+      if (typeof item === 'object' && item !== null) {
+        const obj = item as Record<string, unknown>;
+        if (obj.type === 'image_url' || obj.type === 'input_image') {
+          // Fixed token cost for images
+          total += IMAGE_TOKEN_ESTIMATE;
+        } else if (obj.type === 'text' || obj.type === 'input_text') {
+          // Count text content normally
+          const text = (obj.text || obj.content || '') as string;
+          total += Math.ceil(text.length / 4);
+        } else {
+          // For other types, estimate without image data
+          total += estimateTokensExcludingImages(obj);
+        }
+      }
+    }
+    return total;
+  }
   if (typeof content === 'object' && content !== null) {
-    return Math.ceil(JSON.stringify(content).length / 4);
+    return estimateTokensExcludingImages(content as Record<string, unknown>);
   }
   return 0;
+}
+
+/**
+ * Estimate tokens for an object, excluding base64 image data
+ */
+function estimateTokensExcludingImages(obj: Record<string, unknown>): number {
+  let total = 0;
+  for (const [key, value] of Object.entries(obj)) {
+    // Skip keys that typically contain image data
+    if (key === 'url' || key === 'image_url' || key === 'data') {
+      if (typeof value === 'string' && isBase64ImageData(value)) {
+        total += IMAGE_TOKEN_ESTIMATE;
+        continue;
+      }
+    }
+    if (typeof value === 'string') {
+      if (isBase64ImageData(value)) {
+        total += IMAGE_TOKEN_ESTIMATE;
+      } else {
+        total += Math.ceil(value.length / 4);
+      }
+    } else if (typeof value === 'object' && value !== null) {
+      total += estimateTokens(value);
+    }
+  }
+  return total;
 }
 
 /**
