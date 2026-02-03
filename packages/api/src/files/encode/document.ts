@@ -134,12 +134,11 @@ export async function encodeAndFormatDocuments(
       });
       result.files.push(metadata);
     } else if (provider === Providers.OPENROUTER) {
-      // OpenRouter routing to Gemini: use Gemini's native inline_data format
+      // OpenRouter: use file type with URL format (matching image_url/video_url pattern)
       result.documents.push({
-        type: 'inline_data',
-        inline_data: {
-          mime_type: file.type,
-          data: content,
+        type: 'file',
+        file: {
+          url: `data:${file.type};base64,${content}`,
         },
       });
       result.files.push(metadata);
