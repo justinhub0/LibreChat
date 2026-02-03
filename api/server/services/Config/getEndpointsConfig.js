@@ -5,7 +5,9 @@ const {
   isAgentsEndpoint,
   orderEndpointsConfig,
   defaultAgentCapabilities,
+  getEnabledEndpoints,
 } = require('librechat-data-provider');
+const { logger } = require('@librechat/data-schemas');
 const loadDefaultEndpointsConfig = require('./loadDefaultEConfig');
 const getLogStores = require('~/cache/getLogStores');
 const { getAppConfig } = require('./app');
@@ -29,6 +31,13 @@ async function getEndpointsConfig(req) {
   const appConfig = req.config ?? (await getAppConfig({ role: req.user?.role }));
   const defaultEndpointsConfig = await loadDefaultEndpointsConfig(appConfig);
   const customEndpointsConfig = loadCustomEndpointsConfig(appConfig?.endpoints?.custom);
+
+  // Debug logging
+  const enabledEndpoints = getEnabledEndpoints();
+  logger.info('[getEndpointsConfig] ENDPOINTS env:', process.env.ENDPOINTS);
+  logger.info('[getEndpointsConfig] Enabled endpoints:', enabledEndpoints);
+  logger.info('[getEndpointsConfig] defaultEndpointsConfig keys:', Object.keys(defaultEndpointsConfig));
+  logger.info('[getEndpointsConfig] google in defaultConfig:', !!defaultEndpointsConfig[EModelEndpoint.google]);
 
   /** @type {TEndpointsConfig} */
   const mergedConfig = {

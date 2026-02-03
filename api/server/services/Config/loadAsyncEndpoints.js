@@ -7,6 +7,10 @@ async function loadAsyncEndpoints() {
   let serviceKey, googleUserProvides;
   const { googleKey } = config;
 
+  // Debug logging for Google endpoint initialization
+  logger.info('[loadAsyncEndpoints] GOOGLE_KEY present:', !!googleKey);
+  logger.info('[loadAsyncEndpoints] GOOGLE_KEY value (masked):', googleKey ? `${googleKey.substring(0, 8)}...` : 'not set');
+
   /** Check if GOOGLE_KEY is provided at all(including 'user_provided') */
   const isGoogleKeyProvided = googleKey && googleKey.trim() !== '';
 
@@ -27,6 +31,10 @@ async function loadAsyncEndpoints() {
   }
 
   const google = serviceKey || isGoogleKeyProvided ? { userProvide: googleUserProvides } : false;
+
+  logger.info('[loadAsyncEndpoints] Google endpoint enabled:', !!google);
+  logger.info('[loadAsyncEndpoints] isGoogleKeyProvided:', isGoogleKeyProvided);
+  logger.info('[loadAsyncEndpoints] serviceKey loaded:', !!serviceKey);
 
   return { google };
 }
