@@ -125,7 +125,12 @@ export async function encodeAndFormatDocuments(
         file_data: `data:${file.type};base64,${content}`,
       });
       result.files.push(metadata);
-    } else if (provider === Providers.GOOGLE || provider === Providers.VERTEXAI) {
+    } else if (
+      provider === Providers.GOOGLE ||
+      provider === Providers.VERTEXAI ||
+      provider === Providers.OPENROUTER
+    ) {
+      // Google, Vertex, and OpenRouter (for Gemini models) use the media format
       result.documents.push({
         type: 'media',
         mimeType: file.type,
@@ -133,7 +138,7 @@ export async function encodeAndFormatDocuments(
       });
       result.files.push(metadata);
     } else if (isOpenAILikeProvider(provider) && provider != Providers.AZURE) {
-      // OpenAI supports various file types via their file API
+      // OpenAI and other OpenAI-like providers use the file format
       result.documents.push({
         type: 'file',
         file: {
