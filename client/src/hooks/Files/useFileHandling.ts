@@ -100,33 +100,24 @@ const useFileHandling = (params?: UseFileHandling) => {
           queryClient.refetchQueries([QueryKeys.agent, agent_id]);
           return;
         }
+        // Update file state immediately on success (no delay)
+        // This ensures the real file_id is available when sending messages
         updateFileById(
           data.temp_file_id,
           {
-            progress: 0.9,
+            progress: 1,
+            file_id: data.file_id,
+            temp_file_id: data.temp_file_id,
             filepath: data.filepath,
+            type: data.type,
+            height: data.height,
+            width: data.width,
+            filename: data.filename,
+            source: data.source,
+            embedded: data.embedded,
           },
           assistant_id ? true : false,
         );
-
-        setTimeout(() => {
-          updateFileById(
-            data.temp_file_id,
-            {
-              progress: 1,
-              file_id: data.file_id,
-              temp_file_id: data.temp_file_id,
-              filepath: data.filepath,
-              type: data.type,
-              height: data.height,
-              width: data.width,
-              filename: data.filename,
-              source: data.source,
-              embedded: data.embedded,
-            },
-            assistant_id ? true : false,
-          );
-        }, 300);
       },
       onError: (_error, body) => {
         const error = _error as TError | undefined;
