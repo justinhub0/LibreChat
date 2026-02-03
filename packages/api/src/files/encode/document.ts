@@ -125,16 +125,22 @@ export async function encodeAndFormatDocuments(
         file_data: `data:${file.type};base64,${content}`,
       });
       result.files.push(metadata);
-    } else if (
-      provider === Providers.GOOGLE ||
-      provider === Providers.VERTEXAI ||
-      provider === Providers.OPENROUTER
-    ) {
-      // Google, Vertex, and OpenRouter (for Gemini models) use the media format
+    } else if (provider === Providers.GOOGLE || provider === Providers.VERTEXAI) {
+      // Google and Vertex use the media format
       result.documents.push({
         type: 'media',
         mimeType: file.type,
         data: content,
+      });
+      result.files.push(metadata);
+    } else if (provider === Providers.OPENROUTER) {
+      // OpenRouter uses OpenAI-compatible format with data URL
+      result.documents.push({
+        type: 'file',
+        file: {
+          filename: file.filename,
+          file_data: `data:${file.type};base64,${content}`,
+        },
       });
       result.files.push(metadata);
     } else if (isOpenAILikeProvider(provider) && provider != Providers.AZURE) {
