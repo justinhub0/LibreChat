@@ -21,6 +21,7 @@ const {
   filterMalformedContentParts,
   createCompactionService,
   supportsCompactionModel,
+  transformYouTubeContent,
 } = require('@librechat/api');
 const {
   Callback,
@@ -493,6 +494,18 @@ class AgentClient extends BaseClient {
         } else if (Array.isArray(formattedMessage.content)) {
           formattedMessage.content = [...formattedMessage.content, ...multimodalContent];
         }
+      }
+
+      /**
+       * Transform YouTube URLs to Gemini fileData format for Google/Vertex AI providers.
+       * This enables Gemini to analyze YouTube video content directly.
+       */
+      const provider = this.options.agent?.provider;
+      if (
+        (provider === Providers.GOOGLE || provider === Providers.VERTEXAI) &&
+        formattedMessage.role === 'user'
+      ) {
+        formattedMessage.content = transformYouTubeContent(formattedMessage.content, provider);
       }
 
       const needsTokenCount =
