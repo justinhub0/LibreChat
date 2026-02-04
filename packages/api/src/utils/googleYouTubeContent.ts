@@ -1,6 +1,6 @@
 /**
  * YouTube content transformation for Google/Vertex AI providers
- * Extracts YouTube URLs from text content and converts them to Gemini's fileData format
+ * Extracts YouTube URLs from text content and converts them to Gemini's media format with fileUri
  */
 
 import { Providers } from '@librechat/agents';
@@ -12,15 +12,15 @@ interface TextContentPart {
   text: string;
 }
 
-/** Content part for Gemini fileData (YouTube URLs) - requires type field for LangChain */
-interface FileDataContentPart {
-  type: 'fileData';
+/** Content part for Gemini media (YouTube URLs) - uses 'media' type with fileUri */
+interface MediaContentPart {
+  type: 'media';
   mimeType: string;
   fileUri: string;
 }
 
 /** Generic content part */
-type ContentPart = TextContentPart | FileDataContentPart | Record<string, unknown>;
+type ContentPart = TextContentPart | MediaContentPart | Record<string, unknown>;
 
 /**
  * Checks if a content part is a text part
@@ -49,21 +49,21 @@ function normalizeContent(content: string | ContentPart[]): ContentPart[] {
 }
 
 /**
- * Transforms message content to include YouTube fileData parts for Google/Vertex AI providers
+ * Transforms message content to include YouTube media parts for Google/Vertex AI providers
  *
- * LangChain expects YouTube URLs in a specific format with type field:
+ * The @librechat/agents package supports the 'media' content type with fileUri:
  * {
- *   type: "fileData",
+ *   type: "media",
  *   mimeType: "video/*",
  *   fileUri: "https://www.youtube.com/watch?v=VIDEO_ID"
  * }
  *
- * This function detects YouTube URLs in text content and appends fileData parts
+ * This function detects YouTube URLs in text content and appends media parts
  * so that Gemini can analyze the video content.
  *
  * @param content - Message content (string or array of content parts)
  * @param provider - The provider string (e.g., 'google', 'vertexai')
- * @returns Transformed content array with YouTube fileData parts appended
+ * @returns Transformed content array with YouTube media parts appended
  */
 export function transformYouTubeContent(
   content: string | ContentPart[],
@@ -76,7 +76,7 @@ export function transformYouTubeContent(
 
   const contentParts = normalizeContent(content);
   const result: ContentPart[] = [];
-  const youtubeFileDataParts: FileDataContentPart[] = [];
+  const youtubeMediaParts: MediaContentPart[] = [];
 
   for (const part of contentParts) {
     // Pass through all existing parts unchanged
@@ -89,8 +89,8 @@ export function transformYouTubeContent(
       for (const match of youtubeMatches) {
         const normalizedUrl = normalizeYouTubeUrl(match.url);
 
-        youtubeFileDataParts.push({
-          type: 'fileData',
+        youtubeMediaParts.push({
+          type: 'media',
           mimeType: 'video/*',
           fileUri: normalizedUrl,
         });
@@ -98,9 +98,9 @@ export function transformYouTubeContent(
     }
   }
 
-  // Append YouTube fileData parts at the end
-  if (youtubeFileDataParts.length > 0) {
-    result.push(...youtubeFileDataParts);
+  // Append YouTube media parts at the end
+  if (youtubeMediaParts.length > 0) {
+    result.push(...youtubeMediaParts);
   }
 
   return result;
