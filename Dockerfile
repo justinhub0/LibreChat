@@ -3,8 +3,8 @@
 # Base node image
 FROM node:20-alpine AS node
 
-# Install jemalloc
-RUN apk add --no-cache jemalloc
+# Install jemalloc and git (git needed for GitHub dependencies)
+RUN apk add --no-cache jemalloc git
 RUN apk add --no-cache python3 py3-pip uv
 
 # Set environment variable to use jemalloc
