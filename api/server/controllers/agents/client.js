@@ -671,6 +671,8 @@ class AgentClient extends BaseClient {
           agent_id: memoryConfig.agent.id,
           endpoint: EModelEndpoint.agents,
         });
+      } else if (memoryConfig.agent?.id != null) {
+        prelimAgent = this.options.agent;
       } else if (
         memoryConfig.agent?.id == null &&
         memoryConfig.agent?.model != null &&
@@ -683,6 +685,10 @@ class AgentClient extends BaseClient {
         '[api/server/controllers/agents/client.js #useMemory] Error loading agent for memory',
         error,
       );
+    }
+
+    if (!prelimAgent) {
+      return;
     }
 
     const agent = await initializeAgent(
