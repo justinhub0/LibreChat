@@ -12,11 +12,11 @@ interface TextContentPart {
   text: string;
 }
 
-/** Content part for Gemini fileData (YouTube URLs) */
+/** Content part for Gemini fileData (YouTube URLs) - requires type field for LangChain */
 interface FileDataContentPart {
-  fileData: {
-    fileUri: string;
-  };
+  type: 'fileData';
+  mimeType: string;
+  fileUri: string;
 }
 
 /** Generic content part */
@@ -51,11 +51,11 @@ function normalizeContent(content: string | ContentPart[]): ContentPart[] {
 /**
  * Transforms message content to include YouTube fileData parts for Google/Vertex AI providers
  *
- * The Gemini API expects YouTube URLs in a specific format:
+ * LangChain expects YouTube URLs in a specific format with type field:
  * {
- *   fileData: {
- *     fileUri: "https://www.youtube.com/watch?v=VIDEO_ID"
- *   }
+ *   type: "fileData",
+ *   mimeType: "video/*",
+ *   fileUri: "https://www.youtube.com/watch?v=VIDEO_ID"
  * }
  *
  * This function detects YouTube URLs in text content and appends fileData parts
@@ -90,9 +90,9 @@ export function transformYouTubeContent(
         const normalizedUrl = normalizeYouTubeUrl(match.url);
 
         youtubeFileDataParts.push({
-          fileData: {
-            fileUri: normalizedUrl,
-          },
+          type: 'fileData',
+          mimeType: 'video/*',
+          fileUri: normalizedUrl,
         });
       }
     }
