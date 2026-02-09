@@ -84,6 +84,9 @@ function estimateTokens(content: string | unknown): number {
         if (obj.type === 'image_url' || obj.type === 'input_image') {
           // Fixed token cost for images
           total += IMAGE_TOKEN_ESTIMATE;
+        } else if (obj.type === 'file' || obj.type === 'input_file') {
+          // Fixed token cost for file attachments (PDFs, etc.)
+          total += IMAGE_TOKEN_ESTIMATE;
         } else if (obj.type === 'text' || obj.type === 'input_text') {
           // Count text content normally
           const text = (obj.text || obj.content || '') as string;
@@ -146,7 +149,20 @@ function convertContentItem(item: Record<string, unknown>): Record<string, unkno
       image_url: imageUrl?.url || imageUrl,
     };
   }
-  // Return as-is for other types
+  if (item.type === 'file') {
+    // Convert Chat Completions file format to Responses API input_file format
+    const file = item.file as Record<string, unknown>;
+    return {
+      type: 'input_file',
+      filename: file?.filename,
+      file_data: file?.file_data,
+    };
+  }
+  if (item.type === 'input_file' || item.type === 'input_text' || item.type === 'input_image') {
+    // Already in Responses API format
+    return item;
+  }
+  // Return as-is for other types (media, document, inline_data, etc.)
   return item;
 }
 
