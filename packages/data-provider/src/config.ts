@@ -222,6 +222,19 @@ const modelItemSchema = z.union([
   }),
 ]);
 
+export const googleEndpointSchema = baseEndpointSchema.merge(
+  z.object({
+    models: z
+      .object({
+        default: z.array(modelItemSchema).min(1).optional(),
+        fetch: z.boolean().optional(),
+      })
+      .optional(),
+  }),
+);
+
+export type TGoogleEndpoint = z.infer<typeof googleEndpointSchema>;
+
 export const assistantEndpointSchema = baseEndpointSchema.merge(
   z.object({
     /* assistants specific */
@@ -994,7 +1007,7 @@ export const configSchema = z.object({
     .object({
       all: baseEndpointSchema.optional(),
       [EModelEndpoint.openAI]: baseEndpointSchema.optional(),
-      [EModelEndpoint.google]: baseEndpointSchema.optional(),
+      [EModelEndpoint.google]: googleEndpointSchema.optional(),
       [EModelEndpoint.anthropic]: anthropicEndpointSchema.optional(),
       [EModelEndpoint.azureOpenAI]: azureEndpointSchema.optional(),
       [EModelEndpoint.azureAssistants]: assistantEndpointSchema.optional(),
