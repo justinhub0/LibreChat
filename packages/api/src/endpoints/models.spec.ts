@@ -5,6 +5,7 @@ import {
   splitAndTrim,
   getOpenAIModels,
   getGoogleModels,
+  fetchGoogleModels,
   getBedrockModels,
   getAnthropicModels,
 } from './models';
@@ -579,27 +580,134 @@ describe('getAnthropicModels', () => {
   });
 });
 
-describe('getGoogleModels', () => {
+describe('fetchGoogleModels', () => {
   let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
     originalEnv = { ...process.env };
+    jest.clearAllMocks();
   });
 
   afterEach(() => {
     process.env = originalEnv;
   });
 
-  it('returns default models when GOOGLE_MODELS is not set', () => {
+  it('fetches models and strips models/ prefix', async () => {
+    process.env.GOOGLE_KEY = 'test-api-key';
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        models: [
+          { name: 'models/gemini-2.5-pro' },
+          { name: 'models/gemini-2.0-flash' },
+        ],
+      },
+    });
+
+    const models = await fetchGoogleModels({}, []);
+    expect(models).toEqual(['gemini-2.5-pro', 'gemini-2.0-flash']);
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns fallback models when GOOGLE_KEY is not set', async () => {
+    delete process.env.GOOGLE_KEY;
+    const fallback = ['fallback-model'];
+    const models = await fetchGoogleModels({}, fallback);
+    expect(models).toEqual(fallback);
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+  });
+
+  it('returns fallback models when GOOGLE_KEY is user_provided', async () => {
+    process.env.GOOGLE_KEY = 'user_provided';
+    const fallback = ['fallback-model'];
+    const models = await fetchGoogleModels({}, fallback);
+    expect(models).toEqual(fallback);
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+  });
+
+  it('returns fallback models on network error', async () => {
+    process.env.GOOGLE_KEY = 'test-api-key';
+    mockedAxios.get.mockRejectedValueOnce(new Error('Network error'));
+    const fallback = ['fallback-model'];
+    const models = await fetchGoogleModels({}, fallback);
+    expect(models).toEqual(fallback);
+  });
+});
+
+describe('getGoogleModels', () => {
+  let originalEnv: NodeJS.ProcessEnv;
+
+  beforeEach(() => {
+    originalEnv = { ...process.env };
+    jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    process.env = originalEnv;
+  });
+
+  it('returns default models when no config is provided', async () => {
     delete process.env.GOOGLE_MODELS;
-    const models = getGoogleModels();
+    const models = await getGoogleModels();
     expect(models).toEqual(defaultModels[EModelEndpoint.google]);
   });
 
-  it('returns models from GOOGLE_MODELS when set', () => {
+  it('returns models from GOOGLE_MODELS when set', async () => {
     process.env.GOOGLE_MODELS = 'gemini-pro, bard ';
-    const models = getGoogleModels();
+    const models = await getGoogleModels();
     expect(models).toEqual(['gemini-pro', 'bard']);
+  });
+
+  it('returns YAML default models when provided', async () => {
+    delete process.env.GOOGLE_MODELS;
+    const models = await getGoogleModels({
+      defaultModels: ['gemini-2.5-pro', 'gemini-2.0-flash'],
+    });
+    expect(models).toEqual(['gemini-2.5-pro', 'gemini-2.0-flash']);
+  });
+
+  it('GOOGLE_MODELS env var overrides YAML defaults', async () => {
+    process.env.GOOGLE_MODELS = 'gemini-pro';
+    const models = await getGoogleModels({
+      defaultModels: ['gemini-2.5-pro', 'gemini-2.0-flash'],
+    });
+    expect(models).toEqual(['gemini-pro']);
+  });
+
+  it('fetches models when fetch is enabled', async () => {
+    delete process.env.GOOGLE_MODELS;
+    process.env.GOOGLE_KEY = 'test-api-key';
+    mockedAxios.get.mockResolvedValueOnce({
+      data: {
+        models: [
+          { name: 'models/gemini-2.5-pro' },
+          { name: 'models/gemini-2.0-flash' },
+        ],
+      },
+    });
+    const models = await getGoogleModels({ fetch: true });
+    expect(models).toEqual(['gemini-2.5-pro', 'gemini-2.0-flash']);
+  });
+
+  it('falls back to YAML defaults when fetch fails', async () => {
+    delete process.env.GOOGLE_MODELS;
+    process.env.GOOGLE_KEY = 'test-api-key';
+    mockedAxios.get.mockRejectedValueOnce(new Error('Network error'));
+    const models = await getGoogleModels({
+      fetch: true,
+      defaultModels: ['fallback-model'],
+    });
+    expect(models).toEqual(['fallback-model']);
+  });
+
+  it('does not fetch when GOOGLE_KEY is user_provided', async () => {
+    delete process.env.GOOGLE_MODELS;
+    process.env.GOOGLE_KEY = 'user_provided';
+    const models = await getGoogleModels({
+      fetch: true,
+      defaultModels: ['default-model'],
+    });
+    expect(models).toEqual(['default-model']);
+    expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 });
 

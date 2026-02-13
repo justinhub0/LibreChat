@@ -367,15 +367,111 @@ export async function getAnthropicModels(
 }
 
 /**
- * Gets Google models from environment or defaults.
- * @returns Array of model IDs
+ * Fetches models from the Google Generative Language API.
+ * @param opts - Options for fetching models
+ * @param _models - Fallback models array
+ * @returns Promise resolving to array of model IDs
  */
-export function getGoogleModels(): string[] {
-  let models = defaultModels[EModelEndpoint.google];
-  if (process.env.GOOGLE_MODELS) {
-    models = splitAndTrim(process.env.GOOGLE_MODELS);
+export async function fetchGoogleModels(
+  opts: { user?: string } = {},
+  _models: string[] = [],
+): Promise<string[]> {
+  let models = _models.slice() ?? [];
+  const apiKey = process.env.GOOGLE_KEY;
+  const googleBaseURL = 'https://generativelanguage.googleapis.com/v1beta';
+  let baseURL = googleBaseURL;
+  const reverseProxyUrl = process.env.GOOGLE_REVERSE_PROXY;
+
+  if (reverseProxyUrl) {
+    baseURL = extractBaseURL(reverseProxyUrl) ?? googleBaseURL;
   }
+
+  if (!apiKey || isUserProvided(apiKey)) {
+    return models;
+  }
+
+  const modelsCache = standardCache(CacheKeys.MODEL_QUERIES);
+  const cacheKey = `google:${baseURL}`;
+
+  const cachedModels = await modelsCache.get(cacheKey);
+  if (cachedModels) {
+    return cachedModels as string[];
+  }
+
+  try {
+    const options: {
+      headers: Record<string, string>;
+      timeout: number;
+      httpsAgent?: HttpsProxyAgent<string>;
+    } = {
+      headers: {},
+      timeout: 5000,
+    };
+
+    if (process.env.PROXY) {
+      options.httpsAgent = new HttpsProxyAgent(process.env.PROXY);
+    }
+
+    const url = new URL(`${baseURL.replace(/\/+$/, '')}/models`);
+    url.searchParams.append('key', apiKey);
+
+    const res = await axios.get(url.toString(), options);
+
+    if (res.data?.models && Array.isArray(res.data.models)) {
+      models = res.data.models
+        .map((model: { name: string }) => model.name.replace(/^models\//, ''))
+        .filter((name: string) => name.length > 0);
+    }
+  } catch (error) {
+    logAxiosError({ message: 'Failed to fetch models from Google API', error: error as Error });
+    return _models;
+  }
+
+  if (models.length === 0) {
+    return _models;
+  }
+
+  await modelsCache.set(cacheKey, models);
   return models;
+}
+
+/** Options for fetching Google models */
+export interface GetGoogleModelsOptions {
+  /** User ID for API requests */
+  user?: string;
+  /** Whether models.fetch is enabled from YAML config */
+  fetch?: boolean;
+  /** Default models from YAML config */
+  defaultModels?: string[];
+}
+
+/**
+ * Gets Google models from YAML config, environment, or defaults.
+ * @param opts - Options for fetching models
+ * @returns Promise resolving to array of model IDs
+ */
+export async function getGoogleModels(
+  opts: GetGoogleModelsOptions = {},
+): Promise<string[]> {
+  const hardcodedDefaults = defaultModels[EModelEndpoint.google];
+
+  if (process.env.GOOGLE_MODELS) {
+    return splitAndTrim(process.env.GOOGLE_MODELS);
+  }
+
+  const effectiveDefaults =
+    opts.defaultModels && opts.defaultModels.length > 0 ? opts.defaultModels : hardcodedDefaults;
+
+  if (opts.fetch) {
+    try {
+      return await fetchGoogleModels({ user: opts.user }, effectiveDefaults);
+    } catch (error) {
+      logger.error('Error fetching Google models:', error);
+      return effectiveDefaults;
+    }
+  }
+
+  return effectiveDefaults;
 }
 
 /**
