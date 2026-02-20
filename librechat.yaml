@@ -132,12 +132,19 @@ endpoints:
     recursionLimit: 100
     maxRecursionLimit: 1000
 
-  # Native Google/Gemini endpoint (full multimodal support: files, YouTube, PDFs)
-  # Required env vars:
-  #   GOOGLE_KEY=your-api-key
-  #   GOOGLE_MODELS=gemini-3-pro-preview,gemini-3-flash-preview,gemini-2.5-pro,gemini-2.5-flash,gemini-2.5-flash-lite
+  # Google/Gemini built-in endpoint configuration
   google:
-    streamRate: 25
+    # Gemini 3 models (latest - preview)
+    # Gemini 2.5 models (stable)
+    models:
+      default:
+        - 'gemini-3.1-pro'
+        - 'gemini-3-pro-preview'
+        - 'gemini-3-flash-preview'
+        - 'gemini-2.5-pro'
+        - 'gemini-2.5-flash'
+        - 'gemini-2.5-flash-lite'
+      fetch: true
     titleModel: 'gemini-2.5-flash-lite'
 
   custom:
