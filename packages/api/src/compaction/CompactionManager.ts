@@ -6,8 +6,8 @@ import { EModelEndpoint } from 'librechat-data-provider';
  * Models that support context compaction via OpenAI's Responses API
  */
 const COMPACTION_SUPPORTED_MODELS = [
-  // GPT-5.2 series only
   'gpt-5.2',
+  'gpt-5.4',
 ];
 
 /**

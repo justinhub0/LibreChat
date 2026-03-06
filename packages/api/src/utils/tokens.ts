@@ -59,6 +59,9 @@ const openAIModels = {
   'gpt-5-nano': 400000,
   'gpt-5-pro': 400000,
   'gpt-5.2-pro': 400000,
+  'gpt-5.4': 1047576,
+  'gpt-5.4-pro': 1047576,
+  'gpt-5.4-thinking': 1047576,
 };
 
 const mistralModels = {
@@ -365,6 +368,9 @@ export const modelMaxOutputs = {
   'gpt-5-nano': 128000,
   'gpt-5-pro': 128000,
   'gpt-5.2-pro': 128000,
+  'gpt-5.4': 128000,
+  'gpt-5.4-pro': 128000,
+  'gpt-5.4-thinking': 128000,
   'gpt-oss-20b': 131000,
   'gpt-oss-120b': 131000,
   system_default: 32000,
