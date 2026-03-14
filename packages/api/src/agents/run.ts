@@ -13,43 +13,9 @@ import type {
   LCTool,
 } from '@librechat/agents';
 import type { IUser } from '@librechat/data-schemas';
-import type { Agent, TCompactionConfig } from 'librechat-data-provider';
+import type { Agent } from 'librechat-data-provider';
 import type * as t from '~/types';
 import { resolveHeaders, createSafeUser } from '~/utils/env';
-
-/**
- * Build compaction config for an agent by combining app config with agent's credentials
- */
-function buildAgentCompactionConfig(
-  appCompactionConfig: TCompactionConfig | undefined,
-  modelParameters: Record<string, unknown> | undefined,
-): { enabled: boolean; apiKey: string; baseURL?: string; thresholdPercent?: number; minTokensBeforeCompaction?: number; preserveInstructions?: boolean } | undefined {
-  if (!appCompactionConfig?.enabled) {
-    return undefined;
-  }
-
-  const apiKey =
-    (modelParameters?.apiKey as string) ||
-    process.env.OPENAI_API_KEY ||
-    '';
-
-  const baseURL =
-    (modelParameters?.configuration as Record<string, unknown>)?.baseURL as string ||
-    'https://api.openai.com/v1';
-
-  if (!apiKey) {
-    return undefined;
-  }
-
-  return {
-    enabled: true,
-    apiKey,
-    baseURL,
-    thresholdPercent: appCompactionConfig.thresholdPercent,
-    minTokensBeforeCompaction: appCompactionConfig.minTokensBeforeCompaction,
-    preserveInstructions: appCompactionConfig.preserveInstructions,
-  };
-}
 
 /** Expected shape of JSON tool search results */
 interface ToolSearchJsonResult {
@@ -230,7 +196,6 @@ export async function createRun({
   tokenCounter,
   customHandlers,
   indexTokenCountMap,
-  compactionConfig,
   streaming = true,
   streamUsage = true,
 }: {
@@ -241,7 +206,6 @@ export async function createRun({
   streamUsage?: boolean;
   requestBody?: t.RequestBody;
   user?: IUser;
-  compactionConfig?: TCompactionConfig;
   /** Message history for extracting previously discovered tools */
   messages?: BaseMessage[];
 } & Pick<RunConfig, 'tokenCounter' | 'customHandlers' | 'indexTokenCountMap'>): Promise<
@@ -337,20 +301,6 @@ export async function createRun({
 
     const reasoningKey = getReasoningKey(provider, llmConfig, agent.endpoint);
 
-    // Build compaction config for this agent with its credentials
-    const agentCompaction = buildAgentCompactionConfig(
-      compactionConfig,
-      agent.model_parameters as Record<string, unknown>,
-    );
-
-    // Debug: Log compaction config being passed to agent
-    console.log(`[createRun] Agent ${agent.id} compaction config:`, {
-      enabled: agentCompaction?.enabled,
-      hasApiKey: !!agentCompaction?.apiKey,
-      baseURL: agentCompaction?.baseURL,
-      model: llmConfig.model,
-    });
-
     const agentInput: AgentInputs = {
       provider,
       reasoningKey,
@@ -363,7 +313,6 @@ export async function createRun({
       toolRegistry: agent.toolRegistry,
       maxContextTokens: agent.maxContextTokens,
       useLegacyContent: agent.useLegacyContent ?? false,
-      compaction: agentCompaction,
       discoveredTools: discoveredTools.size > 0 ? Array.from(discoveredTools) : undefined,
     };
     agentInputs.push(agentInput);
