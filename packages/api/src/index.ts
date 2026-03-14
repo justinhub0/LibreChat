@@ -15,6 +15,8 @@ export * from './mcp/errors';
 /* Utilities */
 export * from './mcp/utils';
 export * from './utils';
+export { default as Tokenizer, countTokens } from './utils/tokenizer';
+export type { EncodingName } from './utils/tokenizer';
 export * from './db/utils';
 /* OAuth */
 export * from './oauth';
@@ -43,8 +45,6 @@ export * from './web';
 export * from './cache';
 /* Stream */
 export * from './stream';
-/* Compaction */
-export * from './compaction';
 /* Diagnostics */
 export { memoryDiagnostics } from './utils/memory';
 /* types */

@@ -25,8 +25,6 @@ const {
   createMemoryProcessor,
   createMultiAgentMapper,
   filterMalformedContentParts,
-  createCompactionService,
-  supportsCompactionModel,
   transformYouTubeContent,
 } = require('@librechat/api');
 const {
@@ -59,29 +57,6 @@ const { getRoleByName } = require('~/models/Role');
 const { loadAgent } = require('~/models/Agent');
 const { getMCPManager } = require('~/config');
 const db = require('~/models');
-
-/**
- * Convert compacted Responses API format messages back to LangChain BaseMessage format
- * @param {Array<{role: string, content: string | Array}>} compactedInput - Compacted messages from /responses/compact
- * @returns {import('@langchain/core/messages').BaseMessage[]} LangChain messages
- */
-function convertCompactedToLangChainMessages(compactedInput) {
-  return compactedInput.map((msg) => {
-    const content = msg.content;
-    switch (msg.role) {
-      case 'user':
-        return new HumanMessage({ content });
-      case 'assistant':
-        return new AIMessage({ content });
-      case 'system':
-        return new SystemMessage({ content });
-      default:
-        // Fallback to HumanMessage for unknown roles
-        return new HumanMessage({ content });
-    }
-  });
-}
-
 
 class AgentClient extends BaseClient {
   constructor(options = {}) {
@@ -820,60 +795,6 @@ class AgentClient extends BaseClient {
         toolSet,
       );
 
-      // Check for context compaction
-      const compactionConfig = appConfig?.compaction;
-      const modelName = this.options.agent?.model_parameters?.model;
-      logger.debug(`[AgentClient] Compaction check - enabled: ${compactionConfig?.enabled}, model: ${modelName}`);
-      if (
-        compactionConfig?.enabled &&
-        modelName &&
-        supportsCompactionModel(modelName)
-      ) {
-        try {
-          const apiKey = this.options.agent?.model_parameters?.apiKey ||
-                         process.env.OPENAI_API_KEY;
-          const baseURL = this.options.agent?.model_parameters?.configuration?.baseURL ||
-                          'https://api.openai.com/v1';
-
-          if (apiKey) {
-            const compactionService = createCompactionService({
-              apiKey,
-              baseURL,
-              model: modelName,
-              config: compactionConfig,
-            });
-
-            // Log token estimation before compaction check
-            const estimatedTokens = compactionService.estimateConversationTokens(
-              initialMessages,
-              this.options.agent?.instructions,
-            );
-            logger.debug(`[AgentClient] Estimated tokens: ${estimatedTokens}, shouldCompact: ${compactionService.shouldCompact(estimatedTokens)}`);
-
-            const result = await compactionService.compact(
-              initialMessages,
-              this.options.agent?.instructions,
-            );
-
-            if (result.compacted && result.compactedInput) {
-              logger.debug(
-                `[AgentClient] Compacted conversation: ${result.originalTokens} -> ${result.compactedTokens} tokens`,
-              );
-              // Convert compacted input back to LangChain messages and use them
-              const compactedMessages = convertCompactedToLangChainMessages(result.compactedInput);
-              initialMessages = compactedMessages;
-              // Reset token count map since messages have been compacted
-              indexTokenCountMap = {};
-              logger.debug(
-                `[AgentClient] Using ${compactedMessages.length} compacted messages instead of original`,
-              );
-            }
-          }
-        } catch (compactionError) {
-          logger.warn('[AgentClient] Compaction check failed, continuing without compaction:', compactionError);
-        }
-      }
-
       /**
        * @param {BaseMessage[]} messages
        */
@@ -936,7 +857,6 @@ class AgentClient extends BaseClient {
           requestBody: config.configurable.requestBody,
           user: createSafeUser(this.options.req?.user),
           tokenCounter: createTokenCounter(this.getEncoding()),
-          compactionConfig: undefined,
         });
 
         if (!run) {
@@ -1296,7 +1216,11 @@ class AgentClient extends BaseClient {
     }
   }
 
+  /** Anthropic Claude models use a distinct BPE tokenizer; all others default to o200k_base. */
   getEncoding() {
+    if (this.model && this.model.toLowerCase().includes('claude')) {
+      return 'claude';
+    }
     return 'o200k_base';
   }
 

@@ -7,10 +7,6 @@ version: 1.2.1
 # Cache settings: Set to true to enable caching
 cache: true
 
-# Context compaction for OpenAI Responses API (gpt-5.2)
-compaction:
-  enabled: true
-
 # Custom interface configuration
 interface:
   customWelcome: 'Welcome to LibreChat! Enjoy your experience.'

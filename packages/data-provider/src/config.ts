@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { ZodError } from 'zod';
 import type { TEndpointsConfig, TModelsConfig, TConfig } from './types';
-import { EModelEndpoint, eModelEndpointSchema } from './schemas';
+import { EModelEndpoint, eModelEndpointSchema, isAgentsEndpoint } from './schemas';
 import { specsConfigSchema, TSpecsConfig } from './models';
 import { fileConfigSchema } from './file-config';
 import { apiBaseUrl } from './api-endpoints';
@@ -962,24 +962,6 @@ export const memorySchema = z.object({
 
 export type TMemoryConfig = DeepPartial<z.infer<typeof memorySchema>>;
 
-/**
- * Schema for OpenAI Responses API context compaction configuration.
- * Enables automatic conversation compaction when approaching context limits.
- */
-export const compactionSchema = z.object({
-  /** Enable or disable automatic context compaction. Defaults to false. */
-  enabled: z.boolean().optional().default(false),
-  /** Threshold percentage of context window to trigger compaction (0.0-1.0). Defaults to 0.85 (85%). */
-  thresholdPercent: z.number().min(0).max(1).optional().default(0.85),
-  /** Minimum tokens before compaction can be triggered. Defaults to 10000. */
-  minTokensBeforeCompaction: z.number().optional().default(10000),
-  /** Preserve system instructions during compaction. Defaults to true. */
-  preserveInstructions: z.boolean().optional().default(true),
-  /** Custom compaction prompt to guide how the conversation should be summarized. */
-  compactionPrompt: z.string().optional(),
-});
-
-export type TCompactionConfig = DeepPartial<z.infer<typeof compactionSchema>>;
 
 const customEndpointsSchema = z.array(endpointSchema.partial()).optional();
 
@@ -989,7 +971,6 @@ export const configSchema = z.object({
   ocr: ocrSchema.optional(),
   webSearch: webSearchSchema.optional(),
   memory: memorySchema.optional(),
-  compaction: compactionSchema.optional(),
   secureImageLinks: z.boolean().optional(),
   imageOutputType: z.nativeEnum(EImageOutputType).default(EImageOutputType.PNG),
   includedTools: z.array(z.string()).optional(),
@@ -1770,9 +1751,9 @@ export enum TTSProviders {
 /** Enum for app-wide constants */
 export enum Constants {
   /** Key for the app's version. */
-  VERSION = 'v0.8.3-rc2',
+  VERSION = 'v0.8.3',
   /** Key for the Custom Config's version (librechat.yaml). */
-  CONFIG_VERSION = '1.3.5',
+  CONFIG_VERSION = '1.3.6',
   /** Standard value for the first message's `parentMessageId` value, to indicate no parent exists. */
   NO_PARENT = '00000000-0000-0000-0000-000000000000',
   /** Standard value to use whatever the submission prelim. `responseMessageId` is */
@@ -1958,6 +1939,38 @@ export function getEndpointField<
     return undefined;
   }
   return config[property];
+}
+
+/**
+ * Resolves the effective endpoint type:
+ * - Non-agents endpoint: config.type || endpoint
+ * - Agents + provider: config[provider].type || provider
+ * - Agents, no provider: EModelEndpoint.agents
+ *
+ * Returns `undefined` when endpoint is null/undefined.
+ */
+export function resolveEndpointType(
+  endpointsConfig: TEndpointsConfig | undefined | null,
+  endpoint: string | null | undefined,
+  agentProvider?: string | null,
+): EModelEndpoint | string | undefined {
+  if (!endpoint) {
+    return undefined;
+  }
+
+  if (!isAgentsEndpoint(endpoint)) {
+    return getEndpointField(endpointsConfig, endpoint, 'type') || endpoint;
+  }
+
+  if (agentProvider) {
+    const providerType = getEndpointField(endpointsConfig, agentProvider, 'type');
+    if (providerType) {
+      return providerType;
+    }
+    return agentProvider;
+  }
+
+  return EModelEndpoint.agents;
 }
 
 /** Resolves the `defaultParamsEndpoint` for a given endpoint from its custom params config */

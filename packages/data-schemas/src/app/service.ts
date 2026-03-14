@@ -63,7 +63,6 @@ export const AppService = async (params?: {
   const mcpServersConfig = config.mcpServers || null;
   const mcpSettings = config.mcpSettings || null;
   const actions = config.actions;
-  const compaction = config.compaction;
   const registration = config.registration ?? configDefaults.registration;
   const interfaceConfig = await loadDefaultInterface({ config, configDefaults });
   const turnstileConfig = loadTurnstileConfig(config, configDefaults);
@@ -77,7 +76,6 @@ export const AppService = async (params?: {
     speech,
     balance,
     actions,
-    compaction,
     transactions,
     mcpConfig: mcpServersConfig,
     mcpSettings,
