@@ -21,20 +21,20 @@ function ContextWindowProgressBar() {
     barColor = 'bg-yellow-500';
   }
 
-  const label = localize(
-    'com_ui_context_window',
-    used.toLocaleString(),
-    tokenUsage.maxContextTokens.toLocaleString(),
-    String(percent),
-  );
+  const label = localize('com_ui_context_window', {
+    0: used.toLocaleString(),
+    1: tokenUsage.maxContextTokens.toLocaleString(),
+    2: String(percent),
+  });
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-1 xl:max-w-4xl">
+    <div className="mx-auto w-full max-w-3xl px-4 pb-1 xl:max-w-4xl" aria-live="polite">
       <div
         role="progressbar"
-        aria-valuenow={used}
+        aria-valuenow={percent}
         aria-valuemin={0}
-        aria-valuemax={tokenUsage.maxContextTokens}
+        aria-valuemax={100}
+        aria-valuetext={label}
         aria-label={label}
         className="h-1 w-full overflow-hidden rounded-full bg-surface-tertiary"
       >
@@ -43,7 +43,9 @@ function ContextWindowProgressBar() {
           style={{ width: `${percent}%` }}
         />
       </div>
-      <p className="mt-0.5 text-right text-xs text-text-secondary">{label}</p>
+      <p className="mt-0.5 text-right text-xs text-text-secondary" aria-hidden="true">
+        {label}
+      </p>
     </div>
   );
 }
