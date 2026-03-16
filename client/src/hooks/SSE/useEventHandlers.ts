@@ -42,6 +42,7 @@ import { useApplyAgentTemplate } from '~/hooks/Agents';
 import { useAuthContext } from '~/hooks/AuthContext';
 import { MESSAGE_UPDATE_INTERVAL } from '~/common';
 import { useLiveAnnouncer } from '~/Providers';
+import { useLocalize } from '~/hooks';
 import store from '~/store';
 
 type TSyncData = {
@@ -177,6 +178,7 @@ export default function useEventHandlers({
   setShowStopButton,
   resetLatestMessage,
 }: EventHandlerParams) {
+  const localize = useLocalize();
   const queryClient = useQueryClient();
   const { announcePolite } = useLiveAnnouncer();
   const applyAgentTemplate = useApplyAgentTemplate();
@@ -488,14 +490,23 @@ export default function useEventHandlers({
 
         /* a11y announcements */
         announcePolite({ message: 'end', isStatus: true });
-        announcePolite({ message: getAllContentText(responseMessage) });
 
         const tokenUsage = (data as Record<string, unknown>).tokenUsage as
           | TokenUsageData
           | undefined;
+
+        let a11yMessage = getAllContentText(responseMessage);
         if (tokenUsage && tokenUsage.maxContextTokens > 0) {
           setTokenUsageData(tokenUsage);
+          const used = tokenUsage.promptTokens + tokenUsage.completionTokens;
+          const remaining = Math.max(0, tokenUsage.maxContextTokens - used);
+          a11yMessage += ' ' + localize('com_a11y_context_usage_final', {
+            0: used.toLocaleString(),
+            1: remaining.toLocaleString(),
+            2: tokenUsage.maxContextTokens.toLocaleString(),
+          });
         }
+        announcePolite({ message: a11yMessage });
 
         const isNewConvo = conversation.conversationId !== submissionConvo.conversationId;
 
@@ -625,6 +636,7 @@ export default function useEventHandlers({
       setCompleted,
       isAddedRequest,
       announcePolite,
+      localize,
       setConversation,
       setIsSubmitting,
       setTokenUsageData,
