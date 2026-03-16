@@ -4,7 +4,7 @@ import { useLiveAnnouncer } from '~/Providers';
 import { useLocalize } from '~/hooks';
 import store from '~/store';
 
-const ANNOUNCE_INTERVAL_MS = 30_000;
+const ANNOUNCE_INTERVAL_MS = 20_000;
 
 export default function useTokenUsageAnnouncer() {
   const localize = useLocalize();

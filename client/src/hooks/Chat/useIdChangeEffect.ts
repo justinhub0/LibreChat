@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useResetRecoilState } from 'recoil';
+import { Constants } from 'librechat-data-provider';
 import { logger } from '~/utils';
 import store from '~/store';
 
@@ -16,7 +17,11 @@ export default function useIdChangeEffect(conversationId: string) {
     if (conversationId !== lastConvoId.current) {
       logger.log('conversation', 'Conversation ID change');
       resetVisibleArtifacts();
-      resetTokenUsageData();
+      const isNewConvoTransition =
+        lastConvoId.current === Constants.NEW_CONVO || lastConvoId.current == null;
+      if (!isNewConvoTransition) {
+        resetTokenUsageData();
+      }
     }
     lastConvoId.current = conversationId;
   }, [conversationId, resetVisibleArtifacts, resetTokenUsageData]);
