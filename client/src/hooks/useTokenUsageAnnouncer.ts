@@ -36,12 +36,11 @@ export default function useTokenUsageAnnouncer() {
 
     if (!wasStreaming || streamStartTime == null) {
       announcePolite({
-        message: localize(
-          'com_a11y_context_usage_final',
-          String(used.toLocaleString()),
-          String(remaining.toLocaleString()),
-          String(tokenUsage.maxContextTokens.toLocaleString()),
-        ),
+        message: localize('com_a11y_context_usage_final', {
+          0: used.toLocaleString(),
+          1: remaining.toLocaleString(),
+          2: tokenUsage.maxContextTokens.toLocaleString(),
+        }),
       });
       return;
     }
@@ -57,11 +56,10 @@ export default function useTokenUsageAnnouncer() {
     ) {
       lastAnnouncementRef.current = now;
       announcePolite({
-        message: localize(
-          'com_a11y_context_usage_update',
-          String(used.toLocaleString()),
-          String(tokenUsage.maxContextTokens.toLocaleString()),
-        ),
+        message: localize('com_a11y_context_usage_update', {
+          0: used.toLocaleString(),
+          1: tokenUsage.maxContextTokens.toLocaleString(),
+        }),
       });
     }
   }, [tokenUsage, streamStartTime, announcePolite, localize]);
