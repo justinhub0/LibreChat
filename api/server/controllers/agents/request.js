@@ -305,12 +305,18 @@ const ResumableAgentController = async (req, res, next, initializeClient, addTit
         }
 
         if (!wasAbortedBeforeComplete) {
+          const streamUsage = client.getStreamUsage();
           const finalEvent = {
             final: true,
             conversation,
             title: conversation.title,
             requestMessage: sanitizeMessageForTransmit(userMessage),
             responseMessage: { ...response },
+            tokenUsage: {
+              promptTokens: client.contextPromptTokens ?? streamUsage?.input_tokens ?? 0,
+              completionTokens: streamUsage?.output_tokens ?? 0,
+              maxContextTokens: client.maxContextTokens ?? 0,
+            },
           };
 
           logger.debug(`[ResumableAgentController] Emitting FINAL event`, {
@@ -325,12 +331,18 @@ const ResumableAgentController = async (req, res, next, initializeClient, addTit
           GenerationJobManager.completeJob(streamId);
           await decrementPendingRequest(userId);
         } else {
+          const abortStreamUsage = client.getStreamUsage();
           const finalEvent = {
             final: true,
             conversation,
             title: conversation.title,
             requestMessage: sanitizeMessageForTransmit(userMessage),
             responseMessage: { ...response, unfinished: true },
+            tokenUsage: {
+              promptTokens: client.contextPromptTokens ?? abortStreamUsage?.input_tokens ?? 0,
+              completionTokens: abortStreamUsage?.output_tokens ?? 0,
+              maxContextTokens: client.maxContextTokens ?? 0,
+            },
           };
 
           logger.debug(`[ResumableAgentController] Emitting ABORTED FINAL event`, {
@@ -645,6 +657,7 @@ const _LegacyAgentController = async (req, res, next, initializeClient, addTitle
     }
 
     // Only send if not aborted
+    const nonResumableUsage = client.getStreamUsage();
     if (!job.abortController.signal.aborted) {
       // Create a new response object with minimal copies
       const finalResponse = { ...response };
@@ -655,6 +668,11 @@ const _LegacyAgentController = async (req, res, next, initializeClient, addTitle
         title: conversation.title,
         requestMessage: sanitizeMessageForTransmit(userMessage),
         responseMessage: finalResponse,
+        tokenUsage: {
+          promptTokens: client.contextPromptTokens ?? nonResumableUsage?.input_tokens ?? 0,
+          completionTokens: nonResumableUsage?.output_tokens ?? 0,
+          maxContextTokens: client.maxContextTokens ?? 0,
+        },
       });
       res.end();
 
@@ -684,6 +702,11 @@ const _LegacyAgentController = async (req, res, next, initializeClient, addTitle
         requestMessage: sanitizeMessageForTransmit(userMessage),
         responseMessage: finalResponse,
         error: { message: 'Request was aborted during completion' },
+        tokenUsage: {
+          promptTokens: client.contextPromptTokens ?? nonResumableUsage?.input_tokens ?? 0,
+          completionTokens: nonResumableUsage?.output_tokens ?? 0,
+          maxContextTokens: client.maxContextTokens ?? 0,
+        },
       });
       res.end();
     }

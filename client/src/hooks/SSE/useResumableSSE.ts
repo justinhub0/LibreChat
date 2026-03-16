@@ -14,7 +14,7 @@ import {
   LocalStorageKeys,
   removeNullishValues,
 } from 'librechat-data-provider';
-import type { TMessage, TPayload, TSubmission, EventSubmission } from 'librechat-data-provider';
+import type { TMessage, TPayload, TSubmission, EventSubmission, TokenUsageData } from 'librechat-data-provider';
 import type { EventHandlerParams } from './useEventHandlers';
 import { useGetStartupConfig, useGetUserBalance, queueTitleGeneration } from '~/data-provider';
 import type { ActiveJobsResponse } from '~/data-provider';
@@ -93,6 +93,7 @@ export default function useResumableSSE(
   const [_completed, setCompleted] = useState(new Set());
   const [streamId, setStreamId] = useState<string | null>(null);
   const setAbortScroll = useSetRecoilState(store.abortScrollFamily(runIndex));
+  const setStreamStartTime = useSetRecoilState(store.streamStartTime);
   const setShowStopButton = useSetRecoilState(store.showStopButtonByIndex(runIndex));
 
   const sseRef = useRef<SSE | null>(null);
@@ -119,6 +120,7 @@ export default function useResumableSSE(
     createdHandler,
     syncStepMessage,
     attachmentHandler,
+    tokenUsageHandler,
     resetContentHandler,
   } = useEventHandlers({
     setMessages,
@@ -160,6 +162,7 @@ export default function useResumableSSE(
       sse.addEventListener('open', () => {
         console.log('[ResumableSSE] Stream connected');
         setAbortScroll(false);
+        setStreamStartTime(Date.now());
         // Restore UI state on successful connection (including reconnection)
         setIsSubmitting(true);
         setShowStopButton(true);
@@ -169,6 +172,11 @@ export default function useResumableSSE(
       sse.addEventListener('message', (e: MessageEvent) => {
         try {
           const data = JSON.parse(e.data);
+
+          if (data.tokenUsage != null && data.final == null) {
+            tokenUsageHandler(data.tokenUsage as TokenUsageData);
+            return;
+          }
 
           if (data.final != null) {
             console.log('[ResumableSSE] Received FINAL event', {

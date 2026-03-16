@@ -1,10 +1,12 @@
 const { logger } = require('@librechat/data-schemas');
-const { createContentAggregator } = require('@librechat/agents');
+const { createContentAggregator, GraphEvents } = require('@librechat/agents');
 const {
+  sendEvent,
   initializeAgent,
   validateAgentModel,
   createEdgeCollector,
   filterOrphanedEdges,
+  TokenUsageEmitter,
   GenerationJobManager,
   getCustomEndpointConfig,
   createSequentialChainEdges,
@@ -385,6 +387,19 @@ const initializeClient = async ({ req, res, signal, endpointOption }) => {
       modelDisplayLabel: endpointConfig?.modelDisplayLabel,
       modelLabel: endpointOption.model_parameters.modelLabel,
     });
+
+  if (primaryConfig.maxContextTokens > 0) {
+    const modelEndHandler = eventHandlers[GraphEvents.CHAT_MODEL_END];
+    if (modelEndHandler) {
+      const emitFn = streamId
+        ? (eventData) => GenerationJobManager.emitChunk(streamId, eventData)
+        : (eventData) => sendEvent(res, eventData);
+      modelEndHandler.tokenUsageEmitter = new TokenUsageEmitter(
+        emitFn,
+        primaryConfig.maxContextTokens,
+      );
+    }
+  }
 
   const client = new AgentClient({
     req,

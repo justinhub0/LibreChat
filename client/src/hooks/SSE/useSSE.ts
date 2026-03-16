@@ -10,7 +10,7 @@ import {
   LocalStorageKeys,
   removeNullishValues,
 } from 'librechat-data-provider';
-import type { TMessage, TPayload, TSubmission, EventSubmission } from 'librechat-data-provider';
+import type { TMessage, TPayload, TSubmission, EventSubmission, TokenUsageData } from 'librechat-data-provider';
 import type { EventHandlerParams } from './useEventHandlers';
 import type { TResData } from '~/common';
 import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
@@ -49,6 +49,7 @@ export default function useSSE(
   const { token, isAuthenticated } = useAuthContext();
   const [completed, setCompleted] = useState(new Set());
   const setAbortScroll = useSetRecoilState(store.abortScrollFamily(runIndex));
+  const setStreamStartTime = useSetRecoilState(store.streamStartTime);
   const setShowStopButton = useSetRecoilState(store.showStopButtonByIndex(runIndex));
 
   const {
@@ -71,6 +72,7 @@ export default function useSSE(
     createdHandler,
     attachmentHandler,
     abortConversation,
+    tokenUsageHandler,
   } = useEventHandlers({
     setMessages,
     getMessages,
@@ -118,6 +120,11 @@ export default function useSSE(
 
     sse.addEventListener('message', (e: MessageEvent) => {
       const data = JSON.parse(e.data);
+
+      if (data.tokenUsage != null && data.final == null) {
+        tokenUsageHandler(data.tokenUsage as TokenUsageData);
+        return;
+      }
 
       if (data.final != null) {
         clearDraft(submission.conversation?.conversationId);
@@ -172,6 +179,7 @@ export default function useSSE(
 
     sse.addEventListener('open', () => {
       setAbortScroll(false);
+      setStreamStartTime(Date.now());
       console.log('connection is opened');
     });
 

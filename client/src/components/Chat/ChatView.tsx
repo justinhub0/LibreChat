@@ -8,8 +8,10 @@ import type { TMessage } from 'librechat-data-provider';
 import type { ChatFormValues } from '~/common';
 import { ChatContext, AddedChatContext, useFileMapContext, ChatFormProvider } from '~/Providers';
 import { useAddedResponse, useResumeOnLoad, useAdaptiveSSE, useChatHelpers } from '~/hooks';
+import ContextWindowProgressBar from './Input/ContextWindowProgressBar';
 import ConversationStarters from './Input/ConversationStarters';
 import { useGetMessagesByConvoId } from '~/data-provider';
+import useTokenUsageAnnouncer from '~/hooks/useTokenUsageAnnouncer';
 import MessagesView from './Messages/MessagesView';
 import Presentation from './Presentation';
 import ChatForm from './Input/ChatForm';
@@ -51,6 +53,7 @@ function ChatView({ index = 0 }: { index?: number }) {
   const addedChatHelpers = useAddedResponse();
 
   useAdaptiveSSE(rootSubmission, chatHelpers, false, index);
+  useTokenUsageAnnouncer();
 
   // Auto-resume if navigating back to conversation with active job
   // Wait for messages to load before resuming to avoid race condition
@@ -99,6 +102,7 @@ function ChatView({ index = 0 }: { index?: number }) {
                       isLandingPage && 'max-w-3xl transition-all duration-200 xl:max-w-4xl',
                     )}
                   >
+                    <ContextWindowProgressBar />
                     <ChatForm index={index} />
                     {isLandingPage ? <ConversationStarters /> : <Footer />}
                   </div>

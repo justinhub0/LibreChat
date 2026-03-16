@@ -17,6 +17,12 @@ export * from './schemas';
 
 export type TMessages = TMessage[];
 
+export interface TokenUsageData {
+  promptTokens: number;
+  completionTokens: number;
+  maxContextTokens: number;
+}
+
 /* TODO: Cleanup EndpointOption types */
 export type TEndpointOption = Pick<
   TConversation,
