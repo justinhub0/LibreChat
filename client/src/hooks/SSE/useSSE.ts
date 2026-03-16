@@ -128,6 +128,7 @@ export default function useSSE(
 
       if (data.final != null) {
         clearDraft(submission.conversation?.conversationId);
+        setStreamStartTime(null);
         try {
           finalHandler(data, submission as EventSubmission);
         } catch (error) {
