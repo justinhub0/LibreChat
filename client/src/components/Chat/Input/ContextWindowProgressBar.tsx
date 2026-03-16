@@ -28,13 +28,12 @@ function ContextWindowProgressBar() {
   });
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 pb-1 xl:max-w-4xl" aria-live="polite">
+    <div className="mx-auto w-full max-w-3xl px-4 pb-1 xl:max-w-4xl">
       <div
         role="progressbar"
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuetext={label}
         aria-label={label}
         className="h-1 w-full overflow-hidden rounded-full bg-surface-tertiary"
       >
