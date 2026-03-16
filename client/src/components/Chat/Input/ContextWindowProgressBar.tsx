@@ -1,0 +1,51 @@
+import { memo } from 'react';
+import { useRecoilValue } from 'recoil';
+import { useLocalize } from '~/hooks';
+import store from '~/store';
+
+function ContextWindowProgressBar() {
+  const localize = useLocalize();
+  const tokenUsage = useRecoilValue(store.tokenUsageData);
+
+  if (!tokenUsage || tokenUsage.maxContextTokens <= 0) {
+    return null;
+  }
+
+  const used = tokenUsage.promptTokens + tokenUsage.completionTokens;
+  const percent = Math.min(100, Math.round((used / tokenUsage.maxContextTokens) * 100));
+
+  let barColor = 'bg-green-500';
+  if (percent > 85) {
+    barColor = 'bg-red-500';
+  } else if (percent > 60) {
+    barColor = 'bg-yellow-500';
+  }
+
+  const label = localize(
+    'com_ui_context_window',
+    used.toLocaleString(),
+    tokenUsage.maxContextTokens.toLocaleString(),
+    String(percent),
+  );
+
+  return (
+    <div className="mx-auto w-full max-w-3xl px-4 pb-1 xl:max-w-4xl">
+      <div
+        role="progressbar"
+        aria-valuenow={used}
+        aria-valuemin={0}
+        aria-valuemax={tokenUsage.maxContextTokens}
+        aria-label={label}
+        className="h-1 w-full overflow-hidden rounded-full bg-surface-tertiary"
+      >
+        <div
+          className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <p className="mt-0.5 text-right text-xs text-text-secondary">{label}</p>
+    </div>
+  );
+}
+
+export default memo(ContextWindowProgressBar);

@@ -16,6 +16,7 @@ import {
 import type {
   TMessage,
   TConversation,
+  TokenUsageData,
   EventSubmission,
   TStartupConfig,
 } from 'librechat-data-provider';
@@ -180,6 +181,7 @@ export default function useEventHandlers({
   const { announcePolite } = useLiveAnnouncer();
   const applyAgentTemplate = useApplyAgentTemplate();
   const setAbortScroll = useSetRecoilState(store.abortScroll);
+  const setTokenUsageData = useSetRecoilState(store.tokenUsageData);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -428,6 +430,13 @@ export default function useEventHandlers({
     ],
   );
 
+  const tokenUsageHandler = useCallback(
+    (data: TokenUsageData) => {
+      setTokenUsageData(data);
+    },
+    [setTokenUsageData],
+  );
+
   const finalHandler = useCallback(
     (data: TFinalResData, submission: EventSubmission) => {
       const { requestMessage, responseMessage, conversation, runMessages } = data;
@@ -480,6 +489,13 @@ export default function useEventHandlers({
         /* a11y announcements */
         announcePolite({ message: 'end', isStatus: true });
         announcePolite({ message: getAllContentText(responseMessage) });
+
+        const tokenUsage = (data as Record<string, unknown>).tokenUsage as
+          | TokenUsageData
+          | undefined;
+        if (tokenUsage && tokenUsage.maxContextTokens > 0) {
+          setTokenUsageData(tokenUsage);
+        }
 
         const isNewConvo = conversation.conversationId !== submissionConvo.conversationId;
 
@@ -611,6 +627,7 @@ export default function useEventHandlers({
       announcePolite,
       setConversation,
       setIsSubmitting,
+      setTokenUsageData,
       setShowStopButton,
       location.pathname,
       applyAgentTemplate,
@@ -852,6 +869,7 @@ export default function useEventHandlers({
     syncStepMessage,
     attachmentHandler,
     abortConversation,
+    tokenUsageHandler,
     resetContentHandler,
   };
 }

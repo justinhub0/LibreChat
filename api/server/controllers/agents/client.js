@@ -380,6 +380,8 @@ class AgentClient extends BaseClient {
       this.indexTokenCountMap[i] = messages[i].tokenCount;
     }
 
+    this.contextPromptTokens = promptTokens;
+
     const result = {
       tokenCountMap,
       prompt: payload,

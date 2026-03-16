@@ -4,6 +4,7 @@ const { Constants, EnvVar, GraphEvents, ToolEndHandler } = require('@librechat/a
 const { Tools, StepTypes, FileContext, ErrorTypes } = require('librechat-data-provider');
 const {
   sendEvent,
+  TokenUsageEmitter,
   GenerationJobManager,
   writeAttachmentEvent,
   createToolExecuteHandler,
@@ -16,12 +17,14 @@ const { saveBase64Image } = require('~/server/services/Files/process');
 class ModelEndHandler {
   /**
    * @param {Array<UsageMetadata>} collectedUsage
+   * @param {TokenUsageEmitter} [tokenUsageEmitter]
    */
-  constructor(collectedUsage) {
+  constructor(collectedUsage, tokenUsageEmitter) {
     if (!Array.isArray(collectedUsage)) {
       throw new Error('collectedUsage must be an array');
     }
     this.collectedUsage = collectedUsage;
+    this.tokenUsageEmitter = tokenUsageEmitter;
   }
 
   finalize(errorMessage) {
@@ -72,6 +75,9 @@ class ModelEndHandler {
       }
 
       this.collectedUsage.push(usage);
+      if (this.tokenUsageEmitter) {
+        this.tokenUsageEmitter.onUsageUpdate(usage);
+      }
     } catch (error) {
       logger.error('Error handling model end event:', error);
       return this.finalize(errorMessage);

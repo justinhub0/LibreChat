@@ -13,6 +13,7 @@ export type {
   IJobStore,
 } from './interfaces/IJobStore';
 
+export { TokenUsageEmitter } from './TokenUsageEmitter';
 export { createStreamServices } from './createStreamServices';
 export type { StreamServicesConfig, StreamServices } from './createStreamServices';
 
