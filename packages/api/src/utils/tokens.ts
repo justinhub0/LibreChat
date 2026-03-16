@@ -54,7 +54,7 @@ const openAIModels = {
   'gpt-5': 400000,
   'gpt-5.1': 400000,
   'gpt-5.2': 400000,
-  'gpt-5.3': 400000,
+  'gpt-5.3': 128000,
   'gpt-5.4': 1047576, // 1M context window
   'gpt-5.4-pro': 1047576, // same window as gpt-5.4
   'gpt-5-mini': 400000,

@@ -13,6 +13,7 @@ const LiveAnnouncer: React.FC<LiveAnnouncerProps> = ({ children }) => {
   const [logMessage, setLogMessage] = useState('');
 
   const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const announcementCountRef = useRef(0);
 
   const localize = useLocalize();
 
@@ -30,7 +31,9 @@ const LiveAnnouncer: React.FC<LiveAnnouncerProps> = ({ children }) => {
       clearTimeout(statusTimeoutRef.current);
     }
 
-    setStatusMessage(message);
+    announcementCountRef.current += 1;
+    const uniqueSuffix = '\u200B'.repeat(announcementCountRef.current % 5);
+    setStatusMessage(message + uniqueSuffix);
 
     statusTimeoutRef.current = setTimeout(() => {
       setStatusMessage('');
