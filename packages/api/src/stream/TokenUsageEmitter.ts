@@ -2,11 +2,11 @@ import type { UsageMetadata } from './interfaces/IJobStore';
 
 type EmitFn = (eventData: Record<string, unknown>) => Promise<void> | void;
 
-const EMIT_INTERVAL_MS = 30_000;
+const EMIT_INTERVAL_MS = 20_000;
 
 /**
  * Tracks cumulative token usage during streaming and emits periodic SSE events
- * when the stream has been active for at least 30 seconds.
+ * when the stream has been active for at least 20 seconds.
  */
 export class TokenUsageEmitter {
   private cumulativeInput = 0;
