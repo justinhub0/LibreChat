@@ -5,6 +5,7 @@ import { useLocalize } from '~/hooks';
 import store from '~/store';
 
 const ANNOUNCE_INTERVAL_MS = 20_000;
+const FINAL_ANNOUNCE_DELAY_MS = 3_000;
 
 export default function useTokenUsageAnnouncer() {
   const localize = useLocalize();
@@ -14,6 +15,7 @@ export default function useTokenUsageAnnouncer() {
   const lastAnnouncementRef = useRef(0);
   const prevTokenUsageRef = useRef(tokenUsage);
   const isStreamingRef = useRef(false);
+  const finalTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     isStreamingRef.current = streamStartTime != null;
@@ -21,6 +23,14 @@ export default function useTokenUsageAnnouncer() {
       lastAnnouncementRef.current = 0;
     }
   }, [streamStartTime]);
+
+  useEffect(() => {
+    return () => {
+      if (finalTimeoutRef.current) {
+        clearTimeout(finalTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!tokenUsage || tokenUsage.maxContextTokens <= 0) {
@@ -35,13 +45,18 @@ export default function useTokenUsageAnnouncer() {
     const remaining = Math.max(0, tokenUsage.maxContextTokens - used);
 
     if (!wasStreaming || streamStartTime == null) {
-      announcePolite({
-        message: localize('com_a11y_context_usage_final', {
-          0: used.toLocaleString(),
-          1: remaining.toLocaleString(),
-          2: tokenUsage.maxContextTokens.toLocaleString(),
-        }),
-      });
+      if (finalTimeoutRef.current) {
+        clearTimeout(finalTimeoutRef.current);
+      }
+      finalTimeoutRef.current = setTimeout(() => {
+        announcePolite({
+          message: localize('com_a11y_context_usage_final', {
+            0: used.toLocaleString(),
+            1: remaining.toLocaleString(),
+            2: tokenUsage.maxContextTokens.toLocaleString(),
+          }),
+        });
+      }, FINAL_ANNOUNCE_DELAY_MS);
       return;
     }
 
