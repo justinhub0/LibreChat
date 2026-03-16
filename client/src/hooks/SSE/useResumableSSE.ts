@@ -185,6 +185,7 @@ export default function useResumableSSE(
               hasResponseMessage: !!data.responseMessage,
             });
             clearDraft(currentSubmission.conversation?.conversationId);
+            setStreamStartTime(null);
             try {
               finalHandler(data, currentSubmission as EventSubmission);
             } catch (error) {
