@@ -37,7 +37,7 @@ const LiveAnnouncer: React.FC<LiveAnnouncerProps> = ({ children }) => {
 
     statusTimeoutRef.current = setTimeout(() => {
       setStatusMessage('');
-    }, 1000);
+    }, 5000);
   }, []);
 
   const announceLog = useCallback((message: string) => {
