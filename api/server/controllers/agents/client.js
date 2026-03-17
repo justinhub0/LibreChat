@@ -382,11 +382,6 @@ class AgentClient extends BaseClient {
 
     this.contextPromptTokens = promptTokens;
 
-    const modelEndHandler = this.options.eventHandlers?.['on_chat_model_end'];
-    if (modelEndHandler?.tokenUsageEmitter && promptTokens >= 0) {
-      modelEndHandler.tokenUsageEmitter.contextPromptTokens = promptTokens;
-    }
-
     const result = {
       tokenCountMap,
       prompt: payload,
@@ -419,6 +414,19 @@ class AgentClient extends BaseClient {
         }),
       ),
     );
+
+    /** Include primary agent's system prompt tokens in the context usage count */
+    if (promptTokens >= 0) {
+      const primaryInstructions = this.options.agent.instructions;
+      if (primaryInstructions) {
+        this.contextPromptTokens = promptTokens + this.getTokenCount(primaryInstructions);
+      }
+
+      const modelEndHandler = this.options.eventHandlers?.['on_chat_model_end'];
+      if (modelEndHandler?.tokenUsageEmitter) {
+        modelEndHandler.tokenUsageEmitter.contextPromptTokens = this.contextPromptTokens;
+      }
+    }
 
     return result;
   }
