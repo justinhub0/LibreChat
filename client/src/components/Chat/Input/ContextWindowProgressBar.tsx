@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useRecoilValue } from 'recoil';
 import { useLocalize } from '~/hooks';
 import store from '~/store';
@@ -9,15 +9,26 @@ function ContextWindowProgressBar() {
   const localize = useLocalize();
   const tokenUsage = useRecoilValue(store.tokenUsageData);
   const streamStartTime = useRecoilValue(store.streamStartTime);
+  const lastRenderedUsedRef = useRef<number | null>(null);
   const [, setTick] = useState(0);
 
   useEffect(() => {
     if (streamStartTime == null) {
+      lastRenderedUsedRef.current = null;
       return;
     }
-    const intervalId = setInterval(() => setTick((t) => t + 1), TICK_INTERVAL_MS);
+    const intervalId = setInterval(() => {
+      if (!tokenUsage) {
+        return;
+      }
+      const used = tokenUsage.promptTokens + tokenUsage.completionTokens;
+      if (used !== lastRenderedUsedRef.current) {
+        lastRenderedUsedRef.current = used;
+        setTick((t) => t + 1);
+      }
+    }, TICK_INTERVAL_MS);
     return () => clearInterval(intervalId);
-  }, [streamStartTime]);
+  }, [streamStartTime, tokenUsage]);
 
   if (!tokenUsage || tokenUsage.maxContextTokens <= 0) {
     return null;

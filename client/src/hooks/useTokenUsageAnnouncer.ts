@@ -13,10 +13,12 @@ export default function useTokenUsageAnnouncer() {
   const tokenUsage = useRecoilValue(store.tokenUsageData);
   const streamStartTime = useRecoilValue(store.streamStartTime);
   const tokenUsageRef = useRef(tokenUsage);
+  const lastAnnouncedUsedRef = useRef<number | null>(null);
   tokenUsageRef.current = tokenUsage;
 
   useEffect(() => {
     if (streamStartTime == null) {
+      lastAnnouncedUsedRef.current = null;
       return;
     }
 
@@ -27,6 +29,11 @@ export default function useTokenUsageAnnouncer() {
       }
 
       const used = usage.promptTokens + usage.completionTokens;
+      if (used === lastAnnouncedUsedRef.current) {
+        return;
+      }
+
+      lastAnnouncedUsedRef.current = used;
       announcePolite({
         message: localize('com_a11y_context_usage_update', {
           0: used.toLocaleString(),
