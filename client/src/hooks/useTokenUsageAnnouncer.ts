@@ -12,40 +12,29 @@ export default function useTokenUsageAnnouncer() {
   const { announcePolite } = useLiveAnnouncer();
   const tokenUsage = useRecoilValue(store.tokenUsageData);
   const streamStartTime = useRecoilValue(store.streamStartTime);
-  const lastAnnouncementRef = useRef(0);
-  const prevTokenUsageRef = useRef(tokenUsage);
+  const tokenUsageRef = useRef(tokenUsage);
+  tokenUsageRef.current = tokenUsage;
 
   useEffect(() => {
     if (streamStartTime == null) {
-      lastAnnouncementRef.current = 0;
-    }
-  }, [streamStartTime]);
-
-  useEffect(() => {
-    if (!tokenUsage || tokenUsage.maxContextTokens <= 0 || streamStartTime == null) {
       return;
     }
 
-    const prevUsage = prevTokenUsageRef.current;
-    prevTokenUsageRef.current = tokenUsage;
+    const intervalId = setInterval(() => {
+      const usage = tokenUsageRef.current;
+      if (!usage || usage.maxContextTokens <= 0) {
+        return;
+      }
 
-    const now = Date.now();
-    const elapsed = now - streamStartTime;
-    const sinceLast = now - lastAnnouncementRef.current;
-
-    if (
-      elapsed >= ANNOUNCE_INTERVAL_MS &&
-      sinceLast >= ANNOUNCE_INTERVAL_MS &&
-      tokenUsage !== prevUsage
-    ) {
-      const used = tokenUsage.promptTokens + tokenUsage.completionTokens;
-      lastAnnouncementRef.current = now;
+      const used = usage.promptTokens + usage.completionTokens;
       announcePolite({
         message: localize('com_a11y_context_usage_update', {
           0: used.toLocaleString(),
-          1: tokenUsage.maxContextTokens.toLocaleString(),
+          1: usage.maxContextTokens.toLocaleString(),
         }),
       });
-    }
-  }, [tokenUsage, streamStartTime, announcePolite, localize]);
+    }, ANNOUNCE_INTERVAL_MS);
+
+    return () => clearInterval(intervalId);
+  }, [streamStartTime, announcePolite, localize]);
 }
