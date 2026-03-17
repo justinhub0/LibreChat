@@ -9,12 +9,12 @@ const EMIT_INTERVAL_MS = 20_000;
  * when the stream has been active for at least 20 seconds.
  */
 export class TokenUsageEmitter {
-  private cumulativeInput = 0;
   private cumulativeOutput = 0;
   private lastEmitTime = 0;
   private readonly startTime: number;
   private readonly emit: EmitFn;
   private readonly maxContextTokens: number;
+  private _contextPromptTokens = 0;
 
   constructor(emit: EmitFn, maxContextTokens: number) {
     this.emit = emit;
@@ -22,8 +22,11 @@ export class TokenUsageEmitter {
     this.startTime = Date.now();
   }
 
+  set contextPromptTokens(value: number) {
+    this._contextPromptTokens = value;
+  }
+
   onUsageUpdate(usage: UsageMetadata): void {
-    this.cumulativeInput += Number(usage.input_tokens) || 0;
     this.cumulativeOutput += Number(usage.output_tokens) || 0;
 
     const now = Date.now();
@@ -37,7 +40,7 @@ export class TokenUsageEmitter {
     this.lastEmitTime = now;
     this.emit({
       tokenUsage: {
-        promptTokens: this.cumulativeInput,
+        promptTokens: this._contextPromptTokens,
         completionTokens: this.cumulativeOutput,
         maxContextTokens: this.maxContextTokens,
       },

@@ -21,7 +21,7 @@ function ContextWindowProgressBar() {
       if (!tokenUsage) {
         return;
       }
-      const used = tokenUsage.promptTokens + tokenUsage.completionTokens;
+      const used = tokenUsage.promptTokens;
       if (used !== lastRenderedUsedRef.current) {
         lastRenderedUsedRef.current = used;
         setTick((t) => t + 1);
@@ -34,7 +34,7 @@ function ContextWindowProgressBar() {
     return null;
   }
 
-  const used = tokenUsage.promptTokens + tokenUsage.completionTokens;
+  const used = tokenUsage.promptTokens;
   const percent = Math.min(100, Math.round((used / tokenUsage.maxContextTokens) * 100));
 
   let barColor = 'bg-green-500';

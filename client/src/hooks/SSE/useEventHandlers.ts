@@ -498,7 +498,7 @@ export default function useEventHandlers({
         let a11yMessage = getAllContentText(responseMessage);
         if (tokenUsage && tokenUsage.maxContextTokens > 0) {
           setTokenUsageData(tokenUsage);
-          const used = tokenUsage.promptTokens + tokenUsage.completionTokens;
+          const used = tokenUsage.promptTokens;
           const remaining = Math.max(0, tokenUsage.maxContextTokens - used);
           a11yMessage += ' ' + localize('com_a11y_context_usage_final', {
             0: used.toLocaleString(),
