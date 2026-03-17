@@ -28,7 +28,7 @@ export default function useTokenUsageAnnouncer() {
         return;
       }
 
-      const used = usage.promptTokens + usage.completionTokens;
+      const used = usage.promptTokens;
       if (used === lastAnnouncedUsedRef.current) {
         return;
       }

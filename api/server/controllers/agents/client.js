@@ -382,6 +382,11 @@ class AgentClient extends BaseClient {
 
     this.contextPromptTokens = promptTokens;
 
+    const modelEndHandler = this.options.eventHandlers?.['on_chat_model_end'];
+    if (modelEndHandler?.tokenUsageEmitter && promptTokens >= 0) {
+      modelEndHandler.tokenUsageEmitter.contextPromptTokens = promptTokens;
+    }
+
     const result = {
       tokenCountMap,
       prompt: payload,
