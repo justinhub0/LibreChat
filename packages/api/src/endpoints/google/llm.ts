@@ -1,9 +1,22 @@
 import { Providers } from '@librechat/agents';
+import { GeminiToolAttributes } from '@langchain/google-common/types';
 import { googleSettings, AuthKeys, removeNullishValues } from 'librechat-data-provider';
 import type { GoogleClientOptions, VertexAIClientOptions } from '@librechat/agents';
 import type { GoogleAIToolType } from '@langchain/google-common';
 import type * as t from '~/types';
 import { isEnabled } from '~/utils';
+
+/**
+ * Register 'googleMaps' as a recognized Gemini tool attribute.
+ * The Gemini API supports Google Maps grounding (v1beta), but
+ * @langchain/google-common has not added it to GeminiToolAttributes yet.
+ * Without this, convertToGeminiTools() throws "Received invalid tool"
+ * because it doesn't recognize { googleMaps: {} } as a Gemini-native tool.
+ * Remove this patch once @langchain/google-common adds native support.
+ */
+if (!GeminiToolAttributes.includes('googleMaps')) {
+  GeminiToolAttributes.push('googleMaps');
+}
 
 /** Known Google/Vertex AI parameters that map directly to the client config */
 export const knownGoogleParams = new Set([
