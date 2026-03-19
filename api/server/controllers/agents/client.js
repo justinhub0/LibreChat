@@ -931,12 +931,11 @@ class AgentClient extends BaseClient {
         let errorMsg = `An error occurred while processing the request${err?.message ? `: ${err.message}` : ''}`;
         if (
           err?.message &&
-          (err.message.includes('GoogleGenerativeAI') ||
-            err.message.includes('parse') ||
-            err.message.includes('stream'))
+          err.message.includes('GoogleGenerativeAI') &&
+          (err.message.includes('parse') || err.message.includes('stream'))
         ) {
           errorMsg +=
-            '. If you have "Grounding with Google Maps" enabled, try disabling it — this feature requires a Gemini API key with Maps API access.';
+            '. This may be a stream parsing issue with the Gemini API. If you have "Grounding with Google Maps" enabled, try disabling it — this feature requires a Gemini API key with Maps API access.';
         }
         this.contentParts.push({
           type: ContentTypes.ERROR,
