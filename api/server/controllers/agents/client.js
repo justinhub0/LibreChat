@@ -928,9 +928,17 @@ class AgentClient extends BaseClient {
           '[api/server/controllers/agents/client.js #sendCompletion] Unhandled error type',
           err,
         );
+        let errorMsg = `An error occurred while processing the request${err?.message ? `: ${err.message}` : ''}`;
+        if (
+          err?.message?.includes('Failed to parse stream') &&
+          this.options.agent?.model_parameters?.maps_grounding === true
+        ) {
+          errorMsg +=
+            '. This may be caused by Google Maps grounding — try disabling "Grounding with Google Maps" or rephrasing the query.';
+        }
         this.contentParts.push({
           type: ContentTypes.ERROR,
-          [ContentTypes.ERROR]: `An error occurred while processing the request${err?.message ? `: ${err.message}` : ''}`,
+          [ContentTypes.ERROR]: errorMsg,
         });
       }
     } finally {
