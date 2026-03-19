@@ -1,4 +1,5 @@
 import { Providers } from '@librechat/agents';
+import { logger } from '@librechat/data-schemas';
 import { GeminiToolAttributes } from '@langchain/google-common/types';
 import { googleSettings, AuthKeys, removeNullishValues } from 'librechat-data-provider';
 
@@ -18,6 +19,18 @@ import { isEnabled } from '~/utils';
  */
 if (!GeminiToolAttributes.includes('googleMaps')) {
   GeminiToolAttributes.push('googleMaps');
+}
+
+/**
+ * Google Maps grounding requires Gemini 2.0 Flash, 2.5-*, or 3+ models.
+ * Sending `{ googleMaps: {} }` to unsupported models causes the Gemini API
+ * to return an error that the deprecated `@google/generative-ai` SDK
+ * surfaces as a stream parsing failure.
+ */
+const mapsGroundingModelPattern = /gemini-(2\.0-flash|2\.5|[3-9](\.\d)?|[1-9]\d+)/i;
+
+export function supportsGoogleMapsGrounding(model: string): boolean {
+  return mapsGroundingModelPattern.test(model);
 }
 
 /** Known Google/Vertex AI parameters that map directly to the client config */
@@ -368,7 +381,14 @@ export function getGoogleConfig(
   }
 
   if (enableMapsGrounding) {
-    tools.push({ googleMaps: {} } as GoogleAIToolType);
+    if (supportsGoogleMapsGrounding(modelName)) {
+      tools.push({ googleMaps: {} } as GoogleAIToolType);
+    } else {
+      logger.warn(
+        `[getGoogleConfig] Google Maps grounding is not supported for model "${modelName}". ` +
+          'Supported models: gemini-2.0-flash, gemini-2.5-*, gemini-3+. Skipping googleMaps tool.',
+      );
+    }
   }
 
   // Return the final shape
