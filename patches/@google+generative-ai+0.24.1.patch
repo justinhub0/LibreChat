@@ -1,0 +1,196 @@
+diff --git a/node_modules/@google/generative-ai/dist/index.js b/node_modules/@google/generative-ai/dist/index.js
+index 2fe925f..1db10c0 100644
+--- a/node_modules/@google/generative-ai/dist/index.js
++++ b/node_modules/@google/generative-ai/dist/index.js
+@@ -672,7 +672,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  */
+-const responseLineRE = /^data\: (.*)(?:\n\n|\r\r|\r\n\r\n)/;
+ /**
+  * Process a response.body stream from the backend and return an
+  * iterator that provides one complete GenerateContentResponse at a time
+@@ -717,39 +716,71 @@ function generateResponseSequence(stream) {
+  * Reads a raw stream from the fetch response and join incomplete
+  * chunks, returning a new stream that provides a single complete
+  * GenerateContentResponse in each iteration.
++ *
++ * Patched: replaced fragile regex-based parser with robust
++ * buffer/indexOf approach adapted from @google/genai SDK.
+  */
+ function getResponseStream(inputStream) {
+     const reader = inputStream.getReader();
+     const stream = new ReadableStream({
+         start(controller) {
+-            let currentText = "";
++            let buffer = "";
++            const dataPrefix = "data:";
++            const delimiters = ["\n\n", "\r\r", "\r\n\r\n"];
+             return pump();
+             function pump() {
+                 return reader
+                     .read()
+                     .then(({ value, done }) => {
+                     if (done) {
+-                        if (currentText.trim()) {
++                        if (buffer.trim().length > 0) {
+                             controller.error(new GoogleGenerativeAIError("Failed to parse stream"));
+                             return;
+                         }
+                         controller.close();
+                         return;
+                     }
+-                    currentText += value;
+-                    let match = currentText.match(responseLineRE);
+-                    let parsedResponse;
+-                    while (match) {
+-                        try {
+-                            parsedResponse = JSON.parse(match[1]);
+-                        }
+-                        catch (e) {
+-                            controller.error(new GoogleGenerativeAIError(`Error parsing JSON response: "${match[1]}"`));
++                    // Detect raw API error responses (not SSE-wrapped)
++                    try {
++                        const chunkJson = JSON.parse(value);
++                        if (chunkJson && typeof chunkJson === "object" && "error" in chunkJson) {
++                            const errorMsg = chunkJson.error.message || JSON.stringify(chunkJson.error);
++                            controller.error(new GoogleGenerativeAIError(`API error: ${errorMsg}`));
+                             return;
+                         }
+-                        controller.enqueue(parsedResponse);
+-                        currentText = currentText.substring(match[0].length);
+-                        match = currentText.match(responseLineRE);
++                    }
++                    catch (_e) {
++                        // Not a complete JSON error — continue normal SSE parsing
++                    }
++                    buffer += value;
++                    // Find and process complete SSE events using delimiter search
++                    while (true) {
++                        let delimiterIndex = -1;
++                        let delimiterLength = 0;
++                        for (const delimiter of delimiters) {
++                            const index = buffer.indexOf(delimiter);
++                            if (index !== -1 && (delimiterIndex === -1 || index < delimiterIndex)) {
++                                delimiterIndex = index;
++                                delimiterLength = delimiter.length;
++                            }
++                        }
++                        if (delimiterIndex === -1) {
++                            break;
++                        }
++                        const eventString = buffer.substring(0, delimiterIndex);
++                        buffer = buffer.substring(delimiterIndex + delimiterLength);
++                        const trimmedEvent = eventString.trim();
++                        if (trimmedEvent.startsWith(dataPrefix)) {
++                            const jsonString = trimmedEvent.substring(dataPrefix.length).trim();
++                            try {
++                                controller.enqueue(JSON.parse(jsonString));
++                            }
++                            catch (e) {
++                                controller.error(new GoogleGenerativeAIError(`Error parsing JSON response: "${jsonString}"`));
++                                return;
++                            }
++                        }
++                        // Non-data SSE lines (event:, id:, retry:, comments) are silently skipped
+                     }
+                     return pump();
+                 })
+diff --git a/node_modules/@google/generative-ai/dist/index.mjs b/node_modules/@google/generative-ai/dist/index.mjs
+index 6aec979..41722bb 100644
+--- a/node_modules/@google/generative-ai/dist/index.mjs
++++ b/node_modules/@google/generative-ai/dist/index.mjs
+@@ -670,7 +670,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  */
+-const responseLineRE = /^data\: (.*)(?:\n\n|\r\r|\r\n\r\n)/;
+ /**
+  * Process a response.body stream from the backend and return an
+  * iterator that provides one complete GenerateContentResponse at a time
+@@ -715,39 +714,71 @@ function generateResponseSequence(stream) {
+  * Reads a raw stream from the fetch response and join incomplete
+  * chunks, returning a new stream that provides a single complete
+  * GenerateContentResponse in each iteration.
++ *
++ * Patched: replaced fragile regex-based parser with robust
++ * buffer/indexOf approach adapted from @google/genai SDK.
+  */
+ function getResponseStream(inputStream) {
+     const reader = inputStream.getReader();
+     const stream = new ReadableStream({
+         start(controller) {
+-            let currentText = "";
++            let buffer = "";
++            const dataPrefix = "data:";
++            const delimiters = ["\n\n", "\r\r", "\r\n\r\n"];
+             return pump();
+             function pump() {
+                 return reader
+                     .read()
+                     .then(({ value, done }) => {
+                     if (done) {
+-                        if (currentText.trim()) {
++                        if (buffer.trim().length > 0) {
+                             controller.error(new GoogleGenerativeAIError("Failed to parse stream"));
+                             return;
+                         }
+                         controller.close();
+                         return;
+                     }
+-                    currentText += value;
+-                    let match = currentText.match(responseLineRE);
+-                    let parsedResponse;
+-                    while (match) {
+-                        try {
+-                            parsedResponse = JSON.parse(match[1]);
+-                        }
+-                        catch (e) {
+-                            controller.error(new GoogleGenerativeAIError(`Error parsing JSON response: "${match[1]}"`));
++                    // Detect raw API error responses (not SSE-wrapped)
++                    try {
++                        const chunkJson = JSON.parse(value);
++                        if (chunkJson && typeof chunkJson === "object" && "error" in chunkJson) {
++                            const errorMsg = chunkJson.error.message || JSON.stringify(chunkJson.error);
++                            controller.error(new GoogleGenerativeAIError(`API error: ${errorMsg}`));
+                             return;
+                         }
+-                        controller.enqueue(parsedResponse);
+-                        currentText = currentText.substring(match[0].length);
+-                        match = currentText.match(responseLineRE);
++                    }
++                    catch (_e) {
++                        // Not a complete JSON error — continue normal SSE parsing
++                    }
++                    buffer += value;
++                    // Find and process complete SSE events using delimiter search
++                    while (true) {
++                        let delimiterIndex = -1;
++                        let delimiterLength = 0;
++                        for (const delimiter of delimiters) {
++                            const index = buffer.indexOf(delimiter);
++                            if (index !== -1 && (delimiterIndex === -1 || index < delimiterIndex)) {
++                                delimiterIndex = index;
++                                delimiterLength = delimiter.length;
++                            }
++                        }
++                        if (delimiterIndex === -1) {
++                            break;
++                        }
++                        const eventString = buffer.substring(0, delimiterIndex);
++                        buffer = buffer.substring(delimiterIndex + delimiterLength);
++                        const trimmedEvent = eventString.trim();
++                        if (trimmedEvent.startsWith(dataPrefix)) {
++                            const jsonString = trimmedEvent.substring(dataPrefix.length).trim();
++                            try {
++                                controller.enqueue(JSON.parse(jsonString));
++                            }
++                            catch (e) {
++                                controller.error(new GoogleGenerativeAIError(`Error parsing JSON response: "${jsonString}"`));
++                                return;
++                            }
++                        }
++                        // Non-data SSE lines (event:, id:, retry:, comments) are silently skipped
+                     }
+                     return pump();
+                 })

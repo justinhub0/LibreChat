@@ -10,6 +10,7 @@
   ],
   "scripts": {
     "preinstall": "rm -rf node_modules/@librechat/agents packages/api/node_modules/@librechat/agents 2>/dev/null; npm cache clean --force 2>/dev/null || true",
+    "postinstall": "patch-package",
     "update": "node config/update.js",
     "add-balance": "node config/add-balance.js",
     "set-balance": "node config/set-balance.js",
@@ -130,6 +131,7 @@
     "husky": "^9.1.7",
     "jest": "^30.2.0",
     "lint-staged": "^15.4.3",
+    "patch-package": "^8.0.1",
     "prettier": "^3.5.0",
     "prettier-plugin-tailwindcss": "^0.6.11",
     "turbo": "^2.8.12",
