@@ -150,6 +150,7 @@ export function getGoogleConfig(
 
   const {
     web_search,
+    maps_grounding,
     thinkingLevel,
     thinking = googleSettings.thinking.default,
     thinkingBudget = googleSettings.thinkingBudget.default,
@@ -157,6 +158,7 @@ export function getGoogleConfig(
   } = options.modelOptions || {};
 
   let enableWebSearch = web_search;
+  let enableMapsGrounding = maps_grounding;
 
   const llmConfig: GoogleClientOptions | VertexAIClientOptions = removeNullishValues(
     {
@@ -282,6 +284,14 @@ export function getGoogleConfig(
         continue;
       }
 
+      /** Handle maps_grounding separately - don't add to config */
+      if (key === 'maps_grounding') {
+        if (enableMapsGrounding === undefined && typeof value === 'boolean') {
+          enableMapsGrounding = value;
+        }
+        continue;
+      }
+
       if (knownGoogleParams.has(key)) {
         /** Route known Google params to llmConfig only if undefined */
         applyDefaultParams(llmConfig as Record<string, unknown>, { [key]: value });
@@ -297,6 +307,14 @@ export function getGoogleConfig(
       if (key === 'web_search') {
         if (typeof value === 'boolean') {
           enableWebSearch = value;
+        }
+        continue;
+      }
+
+      /** Handle maps_grounding separately - don't add to config */
+      if (key === 'maps_grounding') {
+        if (typeof value === 'boolean') {
+          enableMapsGrounding = value;
         }
         continue;
       }
@@ -317,6 +335,11 @@ export function getGoogleConfig(
         return;
       }
 
+      if (param === 'maps_grounding') {
+        enableMapsGrounding = false;
+        return;
+      }
+
       if (param in llmConfig) {
         delete (llmConfig as Record<string, unknown>)[param];
       }
@@ -327,6 +350,10 @@ export function getGoogleConfig(
 
   if (enableWebSearch) {
     tools.push({ googleSearch: {} });
+  }
+
+  if (enableMapsGrounding) {
+    tools.push({ googleMaps: {} } as GoogleAIToolType);
   }
 
   // Return the final shape

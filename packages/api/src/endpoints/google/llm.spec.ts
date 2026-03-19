@@ -634,6 +634,105 @@ describe('getGoogleConfig', () => {
     });
   });
 
+  describe('Maps Grounding Functionality', () => {
+    it('should enable maps grounding when maps_grounding is true', () => {
+      const credentials = {
+        [AuthKeys.GOOGLE_API_KEY]: 'test-api-key',
+      };
+
+      const result = getGoogleConfig(credentials, {
+        modelOptions: {
+          model: 'gemini-2.5-flash',
+          maps_grounding: true,
+        },
+      });
+
+      expect(result.tools).toContainEqual({ googleMaps: {} });
+    });
+
+    it('should not include maps grounding tools when maps_grounding is false', () => {
+      const credentials = {
+        [AuthKeys.GOOGLE_API_KEY]: 'test-api-key',
+      };
+
+      const result = getGoogleConfig(credentials, {
+        modelOptions: {
+          model: 'gemini-2.5-flash',
+          maps_grounding: false,
+        },
+      });
+
+      expect(result.tools).not.toContainEqual({ googleMaps: {} });
+    });
+
+    it('should enable maps grounding via defaultParams', () => {
+      const credentials = {
+        [AuthKeys.GOOGLE_API_KEY]: 'test-api-key',
+      };
+
+      const result = getGoogleConfig(credentials, {
+        modelOptions: {
+          model: 'gemini-2.5-flash',
+        },
+        defaultParams: {
+          maps_grounding: true,
+        },
+      });
+
+      expect(result.tools).toContainEqual({ googleMaps: {} });
+    });
+
+    it('should enable maps grounding via addParams', () => {
+      const credentials = {
+        [AuthKeys.GOOGLE_API_KEY]: 'test-api-key',
+      };
+
+      const result = getGoogleConfig(credentials, {
+        modelOptions: {
+          model: 'gemini-2.5-flash',
+        },
+        addParams: {
+          maps_grounding: true,
+        },
+      });
+
+      expect(result.tools).toContainEqual({ googleMaps: {} });
+    });
+
+    it('should disable maps grounding via dropParams', () => {
+      const credentials = {
+        [AuthKeys.GOOGLE_API_KEY]: 'test-api-key',
+      };
+
+      const result = getGoogleConfig(credentials, {
+        modelOptions: {
+          model: 'gemini-2.5-flash',
+          maps_grounding: true,
+        },
+        dropParams: ['maps_grounding'],
+      });
+
+      expect(result.tools).not.toContainEqual({ googleMaps: {} });
+    });
+
+    it('should support both web search and maps grounding simultaneously', () => {
+      const credentials = {
+        [AuthKeys.GOOGLE_API_KEY]: 'test-api-key',
+      };
+
+      const result = getGoogleConfig(credentials, {
+        modelOptions: {
+          model: 'gemini-2.5-flash',
+          web_search: true,
+          maps_grounding: true,
+        },
+      });
+
+      expect(result.tools).toContainEqual({ googleSearch: {} });
+      expect(result.tools).toContainEqual({ googleMaps: {} });
+    });
+  });
+
   describe('Default and Add Parameters', () => {
     it('should apply default parameters when fields are undefined', () => {
       const credentials = {

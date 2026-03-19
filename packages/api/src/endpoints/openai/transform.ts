@@ -16,7 +16,7 @@ const googleExcludeParams = new Set([
 ]);
 
 /** Google-specific tool types that have no OpenAI-compatible equivalent */
-const googleToolsToFilter = new Set(['googleSearch']);
+const googleToolsToFilter = new Set(['googleSearch', 'googleMaps']);
 
 export type ConfigTools = Array<Record<string, unknown>> | Array<GoogleAIToolType>;
 
@@ -93,8 +93,8 @@ export function transformToOpenAIConfig({
 
   if (addParams && typeof addParams === 'object') {
     for (const [key, value] of Object.entries(addParams)) {
-      /** Skip web_search - it's handled separately as a tool */
-      if (key === 'web_search') {
+      /** Skip web_search and maps_grounding - handled separately as tools */
+      if (key === 'web_search' || key === 'maps_grounding') {
         continue;
       }
 
@@ -113,8 +113,8 @@ export function transformToOpenAIConfig({
 
   if (dropParams && Array.isArray(dropParams)) {
     dropParams.forEach((param) => {
-      /** Skip web_search - handled separately */
-      if (param === 'web_search') {
+      /** Skip web_search and maps_grounding - handled separately */
+      if (param === 'web_search' || param === 'maps_grounding') {
         return;
       }
 
@@ -139,6 +139,8 @@ export function transformToOpenAIConfig({
    */
   const webSearchExplicitlyEnabled =
     addParams?.web_search === true || defaultParams?.web_search === true;
+  const mapsGroundingExplicitlyEnabled =
+    addParams?.maps_grounding === true || defaultParams?.maps_grounding === true;
 
   const filterGoogleTool = (tool: unknown): boolean => {
     if (!isGoogle) {
@@ -149,8 +151,8 @@ export function transformToOpenAIConfig({
     }
     const toolKeys = Object.keys(tool as Record<string, unknown>);
     const isGoogleSpecificTool = toolKeys.some((key) => googleToolsToFilter.has(key));
-    /** Preserve googleSearch if web_search was explicitly enabled */
-    if (isGoogleSpecificTool && webSearchExplicitlyEnabled) {
+    /** Preserve Google-specific tools if explicitly enabled */
+    if (isGoogleSpecificTool && (webSearchExplicitlyEnabled || mapsGroundingExplicitlyEnabled)) {
       return true;
     }
     return !isGoogleSpecificTool;
