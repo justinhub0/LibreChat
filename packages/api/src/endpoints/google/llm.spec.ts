@@ -736,6 +736,7 @@ describe('getGoogleConfig', () => {
       expect(result.tools).toContainEqual({ googleSearch: {} });
       expect(result.tools).toContainEqual({ googleMaps: {} });
     });
+
   });
 
   describe('Default and Add Parameters', () => {
