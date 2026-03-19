@@ -636,6 +636,9 @@ describe('getGoogleConfig', () => {
 
   describe('Maps Grounding Functionality', () => {
     it('should register googleMaps in GeminiToolAttributes for LangChain compatibility', () => {
+      // Re-import llm to trigger the side-effect that pushes 'googleMaps'
+      // (jest.resetModules() in beforeEach clears the module cache)
+      require('./llm');
       const { GeminiToolAttributes } = require('@langchain/google-common/types');
       expect(GeminiToolAttributes).toContain('googleMaps');
     });
