@@ -1,5 +1,5 @@
 diff --git a/node_modules/@google/generative-ai/dist/index.js b/node_modules/@google/generative-ai/dist/index.js
-index 2fe925f..66d01ea 100644
+index 2fe925f..67d1cdf 100644
 --- a/node_modules/@google/generative-ai/dist/index.js
 +++ b/node_modules/@google/generative-ai/dist/index.js
 @@ -672,7 +672,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
@@ -121,8 +121,73 @@ index 2fe925f..66d01ea 100644
                      }
                      return pump();
                  })
+@@ -858,12 +912,64 @@ function aggregateResponses(responses) {
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  */
++/**
++ * Extract the last coordinate pair from message contents.
++ * Matches patterns like: 40.7128, -74.0060 or 40.7128,-74.0060
++ * or "latitude 40.7128 longitude -74.0060" etc.
++ * Returns {latitude, longitude} or null.
++ */
++function extractCoordinatesFromContents(contents) {
++    if (!Array.isArray(contents)) return null;
++    // Scan messages in reverse to find the most recent user message with coordinates
++    for (let i = contents.length - 1; i >= 0; i--) {
++        const msg = contents[i];
++        if (msg.role !== "user") continue;
++        if (!Array.isArray(msg.parts)) continue;
++        for (const part of msg.parts) {
++            if (typeof part.text !== "string") continue;
++            // Match coordinate patterns: two decimal numbers that look like lat/lng
++            // Latitude: -90 to 90, Longitude: -180 to 180
++            const coordPattern = /(-?\d{1,3}(?:\.\d+))\s*[,\s]\s*(-?\d{1,3}(?:\.\d+))/g;
++            let match;
++            let lastMatch = null;
++            while ((match = coordPattern.exec(part.text)) !== null) {
++                const lat = parseFloat(match[1]);
++                const lng = parseFloat(match[2]);
++                if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
++                    lastMatch = { latitude: lat, longitude: lng };
++                }
++            }
++            if (lastMatch) return lastMatch;
++        }
++    }
++    return null;
++}
++/**
++ * If googleMaps is in the tools array and the user message contains
++ * coordinates, inject toolConfig.retrievalConfig.latLng so the Maps
++ * API receives coordinates via the correct parameter.
++ */
++function injectMapsRetrievalConfig(params) {
++    if (!params || !Array.isArray(params.tools)) return params;
++    var hasMaps = params.tools.some(function(t) { return t && typeof t === "object" && "googleMaps" in t; });
++    if (!hasMaps) return params;
++    var coords = extractCoordinatesFromContents(params.contents);
++    if (!coords) return params;
++    params.toolConfig = Object.assign({}, params.toolConfig, {
++        retrievalConfig: {
++            latLng: coords
++        }
++    });
++    return params;
++}
+ async function generateContentStream(apiKey, model, params, requestOptions) {
++    injectMapsRetrievalConfig(params);
+     const response = await makeModelRequest(model, Task.STREAM_GENERATE_CONTENT, apiKey,
+     /* stream */ true, JSON.stringify(params), requestOptions);
+     return processStream(response);
+ }
+ async function generateContent(apiKey, model, params, requestOptions) {
++    injectMapsRetrievalConfig(params);
+     const response = await makeModelRequest(model, Task.GENERATE_CONTENT, apiKey,
+     /* stream */ false, JSON.stringify(params), requestOptions);
+     const responseJson = await response.json();
 diff --git a/node_modules/@google/generative-ai/dist/index.mjs b/node_modules/@google/generative-ai/dist/index.mjs
-index 6aec979..4ce90b7 100644
+index 6aec979..2441cb3 100644
 --- a/node_modules/@google/generative-ai/dist/index.mjs
 +++ b/node_modules/@google/generative-ai/dist/index.mjs
 @@ -670,7 +670,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
@@ -244,3 +309,68 @@ index 6aec979..4ce90b7 100644
                      }
                      return pump();
                  })
+@@ -856,12 +910,64 @@ function aggregateResponses(responses) {
+  * See the License for the specific language governing permissions and
+  * limitations under the License.
+  */
++/**
++ * Extract the last coordinate pair from message contents.
++ * Matches patterns like: 40.7128, -74.0060 or 40.7128,-74.0060
++ * or "latitude 40.7128 longitude -74.0060" etc.
++ * Returns {latitude, longitude} or null.
++ */
++function extractCoordinatesFromContents(contents) {
++    if (!Array.isArray(contents)) return null;
++    // Scan messages in reverse to find the most recent user message with coordinates
++    for (let i = contents.length - 1; i >= 0; i--) {
++        const msg = contents[i];
++        if (msg.role !== "user") continue;
++        if (!Array.isArray(msg.parts)) continue;
++        for (const part of msg.parts) {
++            if (typeof part.text !== "string") continue;
++            // Match coordinate patterns: two decimal numbers that look like lat/lng
++            // Latitude: -90 to 90, Longitude: -180 to 180
++            const coordPattern = /(-?\d{1,3}(?:\.\d+))\s*[,\s]\s*(-?\d{1,3}(?:\.\d+))/g;
++            let match;
++            let lastMatch = null;
++            while ((match = coordPattern.exec(part.text)) !== null) {
++                const lat = parseFloat(match[1]);
++                const lng = parseFloat(match[2]);
++                if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
++                    lastMatch = { latitude: lat, longitude: lng };
++                }
++            }
++            if (lastMatch) return lastMatch;
++        }
++    }
++    return null;
++}
++/**
++ * If googleMaps is in the tools array and the user message contains
++ * coordinates, inject toolConfig.retrievalConfig.latLng so the Maps
++ * API receives coordinates via the correct parameter.
++ */
++function injectMapsRetrievalConfig(params) {
++    if (!params || !Array.isArray(params.tools)) return params;
++    var hasMaps = params.tools.some(function(t) { return t && typeof t === "object" && "googleMaps" in t; });
++    if (!hasMaps) return params;
++    var coords = extractCoordinatesFromContents(params.contents);
++    if (!coords) return params;
++    params.toolConfig = Object.assign({}, params.toolConfig, {
++        retrievalConfig: {
++            latLng: coords
++        }
++    });
++    return params;
++}
+ async function generateContentStream(apiKey, model, params, requestOptions) {
++    injectMapsRetrievalConfig(params);
+     const response = await makeModelRequest(model, Task.STREAM_GENERATE_CONTENT, apiKey,
+     /* stream */ true, JSON.stringify(params), requestOptions);
+     return processStream(response);
+ }
+ async function generateContent(apiKey, model, params, requestOptions) {
++    injectMapsRetrievalConfig(params);
+     const response = await makeModelRequest(model, Task.GENERATE_CONTENT, apiKey,
+     /* stream */ false, JSON.stringify(params), requestOptions);
+     const responseJson = await response.json();
