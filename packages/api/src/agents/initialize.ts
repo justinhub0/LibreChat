@@ -403,6 +403,21 @@ export async function initializeAgent(
     agent.additional_instructions = artifactsPromptResult ?? undefined;
   }
 
+  const hasMapsGrounding = options.tools?.some(
+    (tool) => typeof tool === 'object' && tool != null && 'googleMaps' in tool,
+  );
+  if (hasMapsGrounding) {
+    const mapsInstruction =
+      'When using Google Maps grounding, always use natural language place names ' +
+      'or descriptions in your queries (e.g. "restaurants near Times Square, New York"). ' +
+      'Never pass raw coordinates (latitude/longitude numbers) as the search query — ' +
+      'the Maps API does not accept coordinates as search input. ' +
+      'If the user provides coordinates, convert them to a recognizable place name or address first.';
+    agent.additional_instructions = agent.additional_instructions
+      ? `${agent.additional_instructions}\n${mapsInstruction}`
+      : mapsInstruction;
+  }
+
   const agentMaxContextNum = Number(agentMaxContextTokens) || 18000;
   const maxOutputTokensNum = Number(maxOutputTokens) || 0;
 
