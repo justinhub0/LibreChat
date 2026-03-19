@@ -635,6 +635,11 @@ describe('getGoogleConfig', () => {
   });
 
   describe('Maps Grounding Functionality', () => {
+    it('should register googleMaps in GeminiToolAttributes for LangChain compatibility', () => {
+      const { GeminiToolAttributes } = require('@langchain/google-common/types');
+      expect(GeminiToolAttributes).toContain('googleMaps');
+    });
+
     it('should enable maps grounding when maps_grounding is true', () => {
       const credentials = {
         [AuthKeys.GOOGLE_API_KEY]: 'test-api-key',
