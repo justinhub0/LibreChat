@@ -929,13 +929,17 @@ class AgentClient extends BaseClient {
           err,
         );
         let errorMsg = `An error occurred while processing the request${err?.message ? `: ${err.message}` : ''}`;
-        if (
-          err?.message &&
-          err.message.includes('GoogleGenerativeAI') &&
-          (err.message.includes('parse') || err.message.includes('stream'))
-        ) {
-          errorMsg +=
-            '. This may be a stream parsing issue with the Gemini API. If you have "Grounding with Google Maps" enabled, try disabling it — this feature requires a Gemini API key with Maps API access.';
+        if (err?.message && err.message.includes('GoogleGenerativeAI')) {
+          if (
+            err.message.includes('Coordinates are not a valid input') ||
+            err.message.includes('location parameter')
+          ) {
+            errorMsg +=
+              '. This error is caused by Gemini\'s "Grounding with Google Maps" feature. Try disabling it in the conversation settings, or retry — the model sometimes passes coordinates in an unsupported format.';
+          } else if (err.message.includes('parse') || err.message.includes('stream')) {
+            errorMsg +=
+              '. This may be a stream parsing issue with the Gemini API. If you have "Grounding with Google Maps" enabled, try disabling it — this feature requires a Gemini API key with Maps API access.';
+          }
         }
         this.contentParts.push({
           type: ContentTypes.ERROR,
