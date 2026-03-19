@@ -928,9 +928,19 @@ class AgentClient extends BaseClient {
           '[api/server/controllers/agents/client.js #sendCompletion] Unhandled error type',
           err,
         );
+        let errorMsg = `An error occurred while processing the request${err?.message ? `: ${err.message}` : ''}`;
+        if (
+          err?.message &&
+          (err.message.includes('GoogleGenerativeAI') ||
+            err.message.includes('parse') ||
+            err.message.includes('stream'))
+        ) {
+          errorMsg +=
+            '. If you have "Grounding with Google Maps" enabled, try disabling it — this feature requires a Gemini API key with Maps API access.';
+        }
         this.contentParts.push({
           type: ContentTypes.ERROR,
-          [ContentTypes.ERROR]: `An error occurred while processing the request${err?.message ? `: ${err.message}` : ''}`,
+          [ContentTypes.ERROR]: errorMsg,
         });
       }
     } finally {

@@ -1,7 +1,7 @@
 import { Providers } from '@librechat/agents';
 import { AuthKeys, ThinkingLevel } from 'librechat-data-provider';
 import type * as t from '~/types';
-import { getGoogleConfig, getSafetySettings, knownGoogleParams } from './llm';
+import { getGoogleConfig, getSafetySettings, knownGoogleParams, supportsGoogleMapsGrounding } from './llm';
 
 describe('getGoogleConfig', () => {
   const originalEnv = process.env;
@@ -740,6 +740,36 @@ describe('getGoogleConfig', () => {
       expect(result.tools).toContainEqual({ googleMaps: {} });
     });
 
+    it('should skip maps grounding for unsupported models', () => {
+      const credentials = {
+        [AuthKeys.GOOGLE_API_KEY]: 'test-api-key',
+      };
+
+      const result = getGoogleConfig(credentials, {
+        modelOptions: {
+          model: 'gemini-1.5-flash',
+          maps_grounding: true,
+        },
+      });
+
+      expect(result.tools).not.toContainEqual({ googleMaps: {} });
+    });
+
+    it('should allow maps grounding for gemini-3 models', () => {
+      const credentials = {
+        [AuthKeys.GOOGLE_API_KEY]: 'test-api-key',
+      };
+
+      const result = getGoogleConfig(credentials, {
+        modelOptions: {
+          model: 'gemini-3-flash-preview',
+          maps_grounding: true,
+        },
+      });
+
+      expect(result.tools).toContainEqual({ googleMaps: {} });
+    });
+
   });
 
   describe('Default and Add Parameters', () => {
@@ -1068,5 +1098,31 @@ describe('knownGoogleParams', () => {
     expect(knownGoogleParams.has('max_tokens')).toBe(false);
     expect(knownGoogleParams.has('frequency_penalty')).toBe(false);
     expect(knownGoogleParams.has('presence_penalty')).toBe(false);
+  });
+});
+
+describe('supportsGoogleMapsGrounding', () => {
+  it('should support gemini-2.0-flash', () => {
+    expect(supportsGoogleMapsGrounding('gemini-2.0-flash')).toBe(true);
+  });
+
+  it('should support gemini-2.5 models', () => {
+    expect(supportsGoogleMapsGrounding('gemini-2.5-flash')).toBe(true);
+    expect(supportsGoogleMapsGrounding('gemini-2.5-pro')).toBe(true);
+    expect(supportsGoogleMapsGrounding('gemini-2.5-flash-lite')).toBe(true);
+  });
+
+  it('should support gemini-3+ models', () => {
+    expect(supportsGoogleMapsGrounding('gemini-3-flash-preview')).toBe(true);
+    expect(supportsGoogleMapsGrounding('gemini-3.1-pro-preview')).toBe(true);
+  });
+
+  it('should not support gemini-1.5 models', () => {
+    expect(supportsGoogleMapsGrounding('gemini-1.5-flash')).toBe(false);
+    expect(supportsGoogleMapsGrounding('gemini-1.5-pro')).toBe(false);
+  });
+
+  it('should not support gemini-pro (1.0)', () => {
+    expect(supportsGoogleMapsGrounding('gemini-pro')).toBe(false);
   });
 });
