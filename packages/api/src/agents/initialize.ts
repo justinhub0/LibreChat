@@ -408,11 +408,11 @@ export async function initializeAgent(
   );
   if (hasMapsGrounding) {
     const mapsInstruction =
-      'When using Google Maps grounding, always use natural language place names ' +
-      'or descriptions in your queries (e.g. "restaurants near Times Square, New York"). ' +
-      'Never pass raw coordinates (latitude/longitude numbers) as the search query — ' +
-      'the Maps API does not accept coordinates as search input. ' +
-      'If the user provides coordinates, convert them to a recognizable place name or address first.';
+      'When using Google Maps grounding, use natural language place descriptions ' +
+      'in your queries rather than raw coordinate numbers. ' +
+      'Location coordinates from the conversation are automatically provided to the Maps API. ' +
+      'Focus your Maps queries on what the user wants to know (e.g. "restaurants nearby", ' +
+      '"what is at this location") rather than repeating coordinates in the query text.';
     agent.additional_instructions = agent.additional_instructions
       ? `${agent.additional_instructions}\n${mapsInstruction}`
       : mapsInstruction;
