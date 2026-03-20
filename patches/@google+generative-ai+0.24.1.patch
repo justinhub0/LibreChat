@@ -1,5 +1,5 @@
 diff --git a/node_modules/@google/generative-ai/dist/index.js b/node_modules/@google/generative-ai/dist/index.js
-index 2fe925f..67d1cdf 100644
+index 2fe925f..d9fb88d 100644
 --- a/node_modules/@google/generative-ai/dist/index.js
 +++ b/node_modules/@google/generative-ai/dist/index.js
 @@ -672,7 +672,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
@@ -121,57 +121,84 @@ index 2fe925f..67d1cdf 100644
                      }
                      return pump();
                  })
-@@ -858,12 +912,64 @@ function aggregateResponses(responses) {
+@@ -858,12 +912,91 @@ function aggregateResponses(responses) {
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
 +/**
-+ * Extract the last coordinate pair from message contents.
-+ * Matches patterns like: 40.7128, -74.0060 or 40.7128,-74.0060
-+ * or "latitude 40.7128 longitude -74.0060" etc.
++ * Coordinate pattern: two decimal numbers that look like lat/lng.
++ * Latitude: -90 to 90, Longitude: -180 to 180.
++ * Matches: "40.7128, -74.0060", "40.7128 -74.0060", "40.7128,-74.0060"
++ */
++var COORD_PATTERN = /(-?\d{1,3}\.\d+)\s*[,\s]\s*(-?\d{1,3}\.\d+)/g;
++/**
++ * Extract the last valid coordinate pair from a text string.
 + * Returns {latitude, longitude} or null.
 + */
-+function extractCoordinatesFromContents(contents) {
-+    if (!Array.isArray(contents)) return null;
-+    // Scan messages in reverse to find the most recent user message with coordinates
-+    for (let i = contents.length - 1; i >= 0; i--) {
-+        const msg = contents[i];
-+        if (msg.role !== "user") continue;
-+        if (!Array.isArray(msg.parts)) continue;
-+        for (const part of msg.parts) {
-+            if (typeof part.text !== "string") continue;
-+            // Match coordinate patterns: two decimal numbers that look like lat/lng
-+            // Latitude: -90 to 90, Longitude: -180 to 180
-+            const coordPattern = /(-?\d{1,3}(?:\.\d+))\s*[,\s]\s*(-?\d{1,3}(?:\.\d+))/g;
-+            let match;
-+            let lastMatch = null;
-+            while ((match = coordPattern.exec(part.text)) !== null) {
-+                const lat = parseFloat(match[1]);
-+                const lng = parseFloat(match[2]);
-+                if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-+                    lastMatch = { latitude: lat, longitude: lng };
-+                }
-+            }
-+            if (lastMatch) return lastMatch;
++function extractCoordsFromText(text) {
++    var match;
++    var lastMatch = null;
++    COORD_PATTERN.lastIndex = 0;
++    while ((match = COORD_PATTERN.exec(text)) !== null) {
++        var lat = parseFloat(match[1]);
++        var lng = parseFloat(match[2]);
++        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
++            lastMatch = { latitude: lat, longitude: lng };
 +        }
 +    }
-+    return null;
++    return lastMatch;
 +}
 +/**
 + * If googleMaps is in the tools array and the user message contains
-+ * coordinates, inject toolConfig.retrievalConfig.latLng so the Maps
-+ * API receives coordinates via the correct parameter.
++ * coordinates:
++ * 1. Inject toolConfig.retrievalConfig.latLng (location context)
++ * 2. Replace raw coordinates in the message text so the model uses
++ *    natural language for the Maps query instead of raw numbers.
++ *
++ * Only modifies the request payload — not the stored conversation.
 + */
 +function injectMapsRetrievalConfig(params) {
 +    if (!params || !Array.isArray(params.tools)) return params;
 +    var hasMaps = params.tools.some(function(t) { return t && typeof t === "object" && "googleMaps" in t; });
 +    if (!hasMaps) return params;
-+    var coords = extractCoordinatesFromContents(params.contents);
++    if (!Array.isArray(params.contents)) return params;
++    // Find the last user message with coordinates
++    var coords = null;
++    var targetMsg = null;
++    var targetPartIdx = -1;
++    for (var i = params.contents.length - 1; i >= 0; i--) {
++        var msg = params.contents[i];
++        if (msg.role !== "user" || !Array.isArray(msg.parts)) continue;
++        for (var j = 0; j < msg.parts.length; j++) {
++            if (typeof msg.parts[j].text !== "string") continue;
++            var found = extractCoordsFromText(msg.parts[j].text);
++            if (found) {
++                coords = found;
++                targetMsg = msg;
++                targetPartIdx = j;
++                break;
++            }
++        }
++        if (coords) break;
++    }
 +    if (!coords) return params;
++    // 1. Inject retrievalConfig.latLng for location context
 +    params.toolConfig = Object.assign({}, params.toolConfig, {
 +        retrievalConfig: {
 +            latLng: coords
 +        }
++    });
++    // 2. Replace coordinate numbers in the message text so the model
++    //    cannot echo them into the Maps search query.
++    COORD_PATTERN.lastIndex = 0;
++    var originalText = targetMsg.parts[targetPartIdx].text;
++    targetMsg.parts[targetPartIdx].text = originalText.replace(COORD_PATTERN, function(full, latStr, lngStr) {
++        var lat = parseFloat(latStr);
++        var lng = parseFloat(lngStr);
++        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
++            return "the specified location";
++        }
++        return full;
 +    });
 +    return params;
 +}
@@ -187,7 +214,7 @@ index 2fe925f..67d1cdf 100644
      /* stream */ false, JSON.stringify(params), requestOptions);
      const responseJson = await response.json();
 diff --git a/node_modules/@google/generative-ai/dist/index.mjs b/node_modules/@google/generative-ai/dist/index.mjs
-index 6aec979..2441cb3 100644
+index 6aec979..1e90be8 100644
 --- a/node_modules/@google/generative-ai/dist/index.mjs
 +++ b/node_modules/@google/generative-ai/dist/index.mjs
 @@ -670,7 +670,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
@@ -309,57 +336,84 @@ index 6aec979..2441cb3 100644
                      }
                      return pump();
                  })
-@@ -856,12 +910,64 @@ function aggregateResponses(responses) {
+@@ -856,12 +910,91 @@ function aggregateResponses(responses) {
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
 +/**
-+ * Extract the last coordinate pair from message contents.
-+ * Matches patterns like: 40.7128, -74.0060 or 40.7128,-74.0060
-+ * or "latitude 40.7128 longitude -74.0060" etc.
++ * Coordinate pattern: two decimal numbers that look like lat/lng.
++ * Latitude: -90 to 90, Longitude: -180 to 180.
++ * Matches: "40.7128, -74.0060", "40.7128 -74.0060", "40.7128,-74.0060"
++ */
++var COORD_PATTERN = /(-?\d{1,3}\.\d+)\s*[,\s]\s*(-?\d{1,3}\.\d+)/g;
++/**
++ * Extract the last valid coordinate pair from a text string.
 + * Returns {latitude, longitude} or null.
 + */
-+function extractCoordinatesFromContents(contents) {
-+    if (!Array.isArray(contents)) return null;
-+    // Scan messages in reverse to find the most recent user message with coordinates
-+    for (let i = contents.length - 1; i >= 0; i--) {
-+        const msg = contents[i];
-+        if (msg.role !== "user") continue;
-+        if (!Array.isArray(msg.parts)) continue;
-+        for (const part of msg.parts) {
-+            if (typeof part.text !== "string") continue;
-+            // Match coordinate patterns: two decimal numbers that look like lat/lng
-+            // Latitude: -90 to 90, Longitude: -180 to 180
-+            const coordPattern = /(-?\d{1,3}(?:\.\d+))\s*[,\s]\s*(-?\d{1,3}(?:\.\d+))/g;
-+            let match;
-+            let lastMatch = null;
-+            while ((match = coordPattern.exec(part.text)) !== null) {
-+                const lat = parseFloat(match[1]);
-+                const lng = parseFloat(match[2]);
-+                if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-+                    lastMatch = { latitude: lat, longitude: lng };
-+                }
-+            }
-+            if (lastMatch) return lastMatch;
++function extractCoordsFromText(text) {
++    var match;
++    var lastMatch = null;
++    COORD_PATTERN.lastIndex = 0;
++    while ((match = COORD_PATTERN.exec(text)) !== null) {
++        var lat = parseFloat(match[1]);
++        var lng = parseFloat(match[2]);
++        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
++            lastMatch = { latitude: lat, longitude: lng };
 +        }
 +    }
-+    return null;
++    return lastMatch;
 +}
 +/**
 + * If googleMaps is in the tools array and the user message contains
-+ * coordinates, inject toolConfig.retrievalConfig.latLng so the Maps
-+ * API receives coordinates via the correct parameter.
++ * coordinates:
++ * 1. Inject toolConfig.retrievalConfig.latLng (location context)
++ * 2. Replace raw coordinates in the message text so the model uses
++ *    natural language for the Maps query instead of raw numbers.
++ *
++ * Only modifies the request payload — not the stored conversation.
 + */
 +function injectMapsRetrievalConfig(params) {
 +    if (!params || !Array.isArray(params.tools)) return params;
 +    var hasMaps = params.tools.some(function(t) { return t && typeof t === "object" && "googleMaps" in t; });
 +    if (!hasMaps) return params;
-+    var coords = extractCoordinatesFromContents(params.contents);
++    if (!Array.isArray(params.contents)) return params;
++    // Find the last user message with coordinates
++    var coords = null;
++    var targetMsg = null;
++    var targetPartIdx = -1;
++    for (var i = params.contents.length - 1; i >= 0; i--) {
++        var msg = params.contents[i];
++        if (msg.role !== "user" || !Array.isArray(msg.parts)) continue;
++        for (var j = 0; j < msg.parts.length; j++) {
++            if (typeof msg.parts[j].text !== "string") continue;
++            var found = extractCoordsFromText(msg.parts[j].text);
++            if (found) {
++                coords = found;
++                targetMsg = msg;
++                targetPartIdx = j;
++                break;
++            }
++        }
++        if (coords) break;
++    }
 +    if (!coords) return params;
++    // 1. Inject retrievalConfig.latLng for location context
 +    params.toolConfig = Object.assign({}, params.toolConfig, {
 +        retrievalConfig: {
 +            latLng: coords
 +        }
++    });
++    // 2. Replace coordinate numbers in the message text so the model
++    //    cannot echo them into the Maps search query.
++    COORD_PATTERN.lastIndex = 0;
++    var originalText = targetMsg.parts[targetPartIdx].text;
++    targetMsg.parts[targetPartIdx].text = originalText.replace(COORD_PATTERN, function(full, latStr, lngStr) {
++        var lat = parseFloat(latStr);
++        var lng = parseFloat(lngStr);
++        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
++            return "the specified location";
++        }
++        return full;
 +    });
 +    return params;
 +}
