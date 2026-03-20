@@ -282,3 +282,95 @@ describe('initializeAgent — maxContextTokens', () => {
     expect(result.maxContextTokens).toBe(userValue);
   });
 });
+
+describe('initializeAgent — Gemini multi-tool support', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('concatenates native Google tools with MCP tools for Google provider', async () => {
+    const { agent, req, res, db } = createMocks();
+    agent.provider = Providers.GOOGLE;
+    agent.tools = ['mcp_tool_1'];
+
+    const mcpTool = { name: 'mcp_tool_1', call: jest.fn() };
+    const nativeGoogleTool = { googleSearch: {} };
+
+    const loadTools = jest.fn().mockResolvedValue({
+      tools: [mcpTool],
+      toolContextMap: {},
+      userMCPAuthMap: undefined,
+      toolRegistry: undefined,
+      toolDefinitions: [],
+      hasDeferredTools: false,
+    });
+
+    mockGetProviderConfig.mockReturnValue({
+      getOptions: jest.fn().mockResolvedValue({
+        llmConfig: { model: 'gemini-2.5-flash' },
+        endpointTokenConfig: undefined,
+        tools: [nativeGoogleTool],
+      }),
+      overrideProvider: Providers.GOOGLE,
+    });
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.GOOGLE]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.tools).toEqual(expect.arrayContaining([mcpTool, nativeGoogleTool]));
+    expect(result.tools).toHaveLength(2);
+  });
+
+  it('concatenates native Google tools with MCP tools for Vertex AI provider', async () => {
+    const { agent, req, res, db } = createMocks();
+    agent.provider = Providers.VERTEXAI;
+    agent.tools = ['mcp_tool_1'];
+
+    const mcpTool = { name: 'mcp_tool_1', call: jest.fn() };
+    const nativeGoogleTool = { googleMaps: {} };
+
+    const loadTools = jest.fn().mockResolvedValue({
+      tools: [mcpTool],
+      toolContextMap: {},
+      userMCPAuthMap: undefined,
+      toolRegistry: undefined,
+      toolDefinitions: [],
+      hasDeferredTools: false,
+    });
+
+    mockGetProviderConfig.mockReturnValue({
+      getOptions: jest.fn().mockResolvedValue({
+        llmConfig: { model: 'gemini-2.5-pro' },
+        endpointTokenConfig: undefined,
+        tools: [nativeGoogleTool],
+      }),
+      overrideProvider: Providers.VERTEXAI,
+    });
+
+    const result = await initializeAgent(
+      {
+        req,
+        res,
+        agent,
+        loadTools,
+        endpointOption: { endpoint: EModelEndpoint.agents },
+        allowedProviders: new Set([Providers.VERTEXAI]),
+        isInitialAgent: true,
+      },
+      db,
+    );
+
+    expect(result.tools).toEqual(expect.arrayContaining([mcpTool, nativeGoogleTool]));
+    expect(result.tools).toHaveLength(2);
+  });
+});

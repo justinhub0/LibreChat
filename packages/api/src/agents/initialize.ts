@@ -368,15 +368,11 @@ export async function initializeAgent(
     : (structuredTools ?? []);
 
   if (
-    (agent.provider === Providers.GOOGLE || agent.provider === Providers.VERTEXAI) &&
-    options.tools?.length &&
-    hasAgentTools
-  ) {
-    throw new Error(`{ "type": "${ErrorTypes.GOOGLE_TOOL_CONFLICT}"}`);
-  } else if (
     (agent.provider === Providers.OPENAI ||
       agent.provider === Providers.AZURE ||
-      agent.provider === Providers.ANTHROPIC) &&
+      agent.provider === Providers.ANTHROPIC ||
+      agent.provider === Providers.GOOGLE ||
+      agent.provider === Providers.VERTEXAI) &&
     options.tools?.length &&
     structuredTools?.length
   ) {
