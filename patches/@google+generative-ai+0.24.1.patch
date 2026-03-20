@@ -1,5 +1,5 @@
 diff --git a/node_modules/@google/generative-ai/dist/index.js b/node_modules/@google/generative-ai/dist/index.js
-index 2fe925f..d9fb88d 100644
+index 2fe925f..43d29fb 100644
 --- a/node_modules/@google/generative-ai/dist/index.js
 +++ b/node_modules/@google/generative-ai/dist/index.js
 @@ -672,7 +672,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
@@ -121,7 +121,7 @@ index 2fe925f..d9fb88d 100644
                      }
                      return pump();
                  })
-@@ -858,12 +912,91 @@ function aggregateResponses(responses) {
+@@ -858,12 +912,133 @@ function aggregateResponses(responses) {
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
@@ -132,12 +132,40 @@ index 2fe925f..d9fb88d 100644
 + */
 +var COORD_PATTERN = /(-?\d{1,3}\.\d+)\s*[,\s]\s*(-?\d{1,3}\.\d+)/g;
 +/**
++ * Cardinal direction coordinate pattern.
++ * Matches: "38 N 126 E", "38N 126E", "38°N 126°E", "38.5 S, 126.3 W"
++ */
++var CARDINAL_PATTERN = /(\d{1,3}(?:\.\d+)?)\s*°?\s*([NSns])\s*[,\s]\s*(\d{1,3}(?:\.\d+)?)\s*°?\s*([EWew])/g;
++/**
++ * Convert a cardinal direction coordinate match to decimal {latitude, longitude}.
++ */
++function cardinalToDecimal(latVal, latDir, lngVal, lngDir) {
++    var lat = parseFloat(latVal);
++    var lng = parseFloat(lngVal);
++    if (latDir === "S" || latDir === "s") lat = -lat;
++    if (lngDir === "W" || lngDir === "w") lng = -lng;
++    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
++        return { latitude: lat, longitude: lng };
++    }
++    return null;
++}
++/**
 + * Extract the last valid coordinate pair from a text string.
++ * Tries cardinal direction format first (e.g. "38 N 126 E"),
++ * then falls back to decimal format (e.g. "40.7128, -74.0060").
 + * Returns {latitude, longitude} or null.
 + */
 +function extractCoordsFromText(text) {
 +    var match;
 +    var lastMatch = null;
++    // Try cardinal direction coordinates first
++    CARDINAL_PATTERN.lastIndex = 0;
++    while ((match = CARDINAL_PATTERN.exec(text)) !== null) {
++        var result = cardinalToDecimal(match[1], match[2], match[3], match[4]);
++        if (result) lastMatch = result;
++    }
++    if (lastMatch) return lastMatch;
++    // Fall back to decimal coordinates
 +    COORD_PATTERN.lastIndex = 0;
 +    while ((match = COORD_PATTERN.exec(text)) !== null) {
 +        var lat = parseFloat(match[1]);
@@ -147,6 +175,29 @@ index 2fe925f..d9fb88d 100644
 +        }
 +    }
 +    return lastMatch;
++}
++/**
++ * Replace all coordinate patterns in text with a placeholder string.
++ */
++function stripCoordsFromText(text) {
++    var replaced = text;
++    // Strip cardinal direction coordinates
++    CARDINAL_PATTERN.lastIndex = 0;
++    replaced = replaced.replace(CARDINAL_PATTERN, function(full, latVal, latDir, lngVal, lngDir) {
++        var result = cardinalToDecimal(latVal, latDir, lngVal, lngDir);
++        return result ? "the specified location" : full;
++    });
++    // Strip decimal coordinates
++    COORD_PATTERN.lastIndex = 0;
++    replaced = replaced.replace(COORD_PATTERN, function(full, latStr, lngStr) {
++        var lat = parseFloat(latStr);
++        var lng = parseFloat(lngStr);
++        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
++            return "the specified location";
++        }
++        return full;
++    });
++    return replaced;
 +}
 +/**
 + * If googleMaps is in the tools array and the user message contains
@@ -190,16 +241,7 @@ index 2fe925f..d9fb88d 100644
 +    });
 +    // 2. Replace coordinate numbers in the message text so the model
 +    //    cannot echo them into the Maps search query.
-+    COORD_PATTERN.lastIndex = 0;
-+    var originalText = targetMsg.parts[targetPartIdx].text;
-+    targetMsg.parts[targetPartIdx].text = originalText.replace(COORD_PATTERN, function(full, latStr, lngStr) {
-+        var lat = parseFloat(latStr);
-+        var lng = parseFloat(lngStr);
-+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-+            return "the specified location";
-+        }
-+        return full;
-+    });
++    targetMsg.parts[targetPartIdx].text = stripCoordsFromText(targetMsg.parts[targetPartIdx].text);
 +    return params;
 +}
  async function generateContentStream(apiKey, model, params, requestOptions) {
@@ -214,7 +256,7 @@ index 2fe925f..d9fb88d 100644
      /* stream */ false, JSON.stringify(params), requestOptions);
      const responseJson = await response.json();
 diff --git a/node_modules/@google/generative-ai/dist/index.mjs b/node_modules/@google/generative-ai/dist/index.mjs
-index 6aec979..1e90be8 100644
+index 6aec979..f78d258 100644
 --- a/node_modules/@google/generative-ai/dist/index.mjs
 +++ b/node_modules/@google/generative-ai/dist/index.mjs
 @@ -670,7 +670,6 @@ typeof SuppressedError === "function" ? SuppressedError : function (error, suppr
@@ -336,7 +378,7 @@ index 6aec979..1e90be8 100644
                      }
                      return pump();
                  })
-@@ -856,12 +910,91 @@ function aggregateResponses(responses) {
+@@ -856,12 +910,133 @@ function aggregateResponses(responses) {
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
@@ -347,12 +389,40 @@ index 6aec979..1e90be8 100644
 + */
 +var COORD_PATTERN = /(-?\d{1,3}\.\d+)\s*[,\s]\s*(-?\d{1,3}\.\d+)/g;
 +/**
++ * Cardinal direction coordinate pattern.
++ * Matches: "38 N 126 E", "38N 126E", "38°N 126°E", "38.5 S, 126.3 W"
++ */
++var CARDINAL_PATTERN = /(\d{1,3}(?:\.\d+)?)\s*°?\s*([NSns])\s*[,\s]\s*(\d{1,3}(?:\.\d+)?)\s*°?\s*([EWew])/g;
++/**
++ * Convert a cardinal direction coordinate match to decimal {latitude, longitude}.
++ */
++function cardinalToDecimal(latVal, latDir, lngVal, lngDir) {
++    var lat = parseFloat(latVal);
++    var lng = parseFloat(lngVal);
++    if (latDir === "S" || latDir === "s") lat = -lat;
++    if (lngDir === "W" || lngDir === "w") lng = -lng;
++    if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
++        return { latitude: lat, longitude: lng };
++    }
++    return null;
++}
++/**
 + * Extract the last valid coordinate pair from a text string.
++ * Tries cardinal direction format first (e.g. "38 N 126 E"),
++ * then falls back to decimal format (e.g. "40.7128, -74.0060").
 + * Returns {latitude, longitude} or null.
 + */
 +function extractCoordsFromText(text) {
 +    var match;
 +    var lastMatch = null;
++    // Try cardinal direction coordinates first
++    CARDINAL_PATTERN.lastIndex = 0;
++    while ((match = CARDINAL_PATTERN.exec(text)) !== null) {
++        var result = cardinalToDecimal(match[1], match[2], match[3], match[4]);
++        if (result) lastMatch = result;
++    }
++    if (lastMatch) return lastMatch;
++    // Fall back to decimal coordinates
 +    COORD_PATTERN.lastIndex = 0;
 +    while ((match = COORD_PATTERN.exec(text)) !== null) {
 +        var lat = parseFloat(match[1]);
@@ -362,6 +432,29 @@ index 6aec979..1e90be8 100644
 +        }
 +    }
 +    return lastMatch;
++}
++/**
++ * Replace all coordinate patterns in text with a placeholder string.
++ */
++function stripCoordsFromText(text) {
++    var replaced = text;
++    // Strip cardinal direction coordinates
++    CARDINAL_PATTERN.lastIndex = 0;
++    replaced = replaced.replace(CARDINAL_PATTERN, function(full, latVal, latDir, lngVal, lngDir) {
++        var result = cardinalToDecimal(latVal, latDir, lngVal, lngDir);
++        return result ? "the specified location" : full;
++    });
++    // Strip decimal coordinates
++    COORD_PATTERN.lastIndex = 0;
++    replaced = replaced.replace(COORD_PATTERN, function(full, latStr, lngStr) {
++        var lat = parseFloat(latStr);
++        var lng = parseFloat(lngStr);
++        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
++            return "the specified location";
++        }
++        return full;
++    });
++    return replaced;
 +}
 +/**
 + * If googleMaps is in the tools array and the user message contains
@@ -405,16 +498,7 @@ index 6aec979..1e90be8 100644
 +    });
 +    // 2. Replace coordinate numbers in the message text so the model
 +    //    cannot echo them into the Maps search query.
-+    COORD_PATTERN.lastIndex = 0;
-+    var originalText = targetMsg.parts[targetPartIdx].text;
-+    targetMsg.parts[targetPartIdx].text = originalText.replace(COORD_PATTERN, function(full, latStr, lngStr) {
-+        var lat = parseFloat(latStr);
-+        var lng = parseFloat(lngStr);
-+        if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-+            return "the specified location";
-+        }
-+        return full;
-+    });
++    targetMsg.parts[targetPartIdx].text = stripCoordsFromText(targetMsg.parts[targetPartIdx].text);
 +    return params;
 +}
  async function generateContentStream(apiKey, model, params, requestOptions) {
