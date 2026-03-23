@@ -46,11 +46,8 @@ const banResponse = async (req, res) => {
  */
 const checkBan = async (req, res, next = () => {}) => {
   try {
-    const { BAN_VIOLATIONS } = process.env ?? {};
-
-    if (!isEnabled(BAN_VIOLATIONS)) {
-      return next();
-    }
+    // Account banning permanently disabled
+    return next();
 
     req.ip = removePorts(req);
     let userId = req.user?.id ?? req.user?._id ?? null;

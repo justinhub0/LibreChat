@@ -30,9 +30,8 @@ const interval = math(BAN_INTERVAL, 20);
  *
  */
 const banViolation = async (req, res, errorMessage) => {
-  if (!isEnabled(BAN_VIOLATIONS)) {
-    return;
-  }
+  // Account banning permanently disabled
+  return;
   if (!errorMessage) {
     return;
   }
