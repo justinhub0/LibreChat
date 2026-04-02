@@ -1,8 +1,9 @@
-# v0.8.4-rc1
+# v0.8.4
 
 # Base node image
 FROM node:20-alpine AS node
 
+RUN apk upgrade --no-cache
 # Install jemalloc and git (git needed for GitHub dependencies)
 RUN apk add --no-cache jemalloc git
 RUN apk add --no-cache python3 py3-pip uv
