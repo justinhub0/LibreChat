@@ -5,7 +5,6 @@ import { useSetRecoilState } from 'recoil';
 import {
   request,
   Constants,
-  /* @ts-ignore */
   createPayload,
   LocalStorageKeys,
   removeNullishValues,
@@ -16,17 +15,8 @@ import type { TResData } from '~/common';
 import { useGetStartupConfig, useGetUserBalance } from '~/data-provider';
 import { useAuthContext } from '~/hooks/AuthContext';
 import useEventHandlers from './useEventHandlers';
+import { clearAllDrafts } from '~/utils';
 import store from '~/store';
-
-const clearDraft = (conversationId?: string | null) => {
-  if (conversationId) {
-    localStorage.removeItem(`${LocalStorageKeys.TEXT_DRAFT}${conversationId}`);
-    localStorage.removeItem(`${LocalStorageKeys.FILES_DRAFT}${conversationId}`);
-  } else {
-    localStorage.removeItem(`${LocalStorageKeys.TEXT_DRAFT}${Constants.NEW_CONVO}`);
-    localStorage.removeItem(`${LocalStorageKeys.FILES_DRAFT}${Constants.NEW_CONVO}`);
-  }
-};
 
 type ChatHelpers = Pick<
   EventHandlerParams,
@@ -127,7 +117,7 @@ export default function useSSE(
       }
 
       if (data.final != null) {
-        clearDraft(submission.conversation?.conversationId);
+        clearAllDrafts(submission.conversation?.conversationId);
         setStreamStartTime(null);
         try {
           finalHandler(data, submission as EventSubmission);
