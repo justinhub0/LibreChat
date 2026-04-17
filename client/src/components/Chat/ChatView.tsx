@@ -6,7 +6,7 @@ import { useParams } from 'react-router-dom';
 import { Constants, buildTree } from 'librechat-data-provider';
 import type { TMessage } from 'librechat-data-provider';
 import type { ChatFormValues } from '~/common';
-import { ChatContext, AddedChatContext, useFileMapContext, ChatFormProvider } from '~/Providers';
+import { ChatContext, AddedChatContext, ChatFormProvider, useFileMapContext } from '~/Providers';
 import { useAddedResponse, useResumeOnLoad, useAdaptiveSSE, useChatHelpers } from '~/hooks';
 import ContextWindowProgressBar from './Input/ContextWindowProgressBar';
 import ConversationStarters from './Input/ConversationStarters';
@@ -36,6 +36,10 @@ function ChatView({ index = 0 }: { index?: number }) {
   const rootSubmission = useRecoilValue(store.submissionByIndex(index));
   const centerFormOnLanding = useRecoilValue(store.centerFormOnLanding);
 
+  const methods = useForm<ChatFormValues>({
+    defaultValues: { text: '' },
+  });
+
   const fileMap = useFileMapContext();
 
   const { data: messagesTree = null, isLoading } = useGetMessagesByConvoId(conversationId ?? '', {
@@ -59,10 +63,6 @@ function ChatView({ index = 0 }: { index?: number }) {
   // Wait for messages to load before resuming to avoid race condition
   useResumeOnLoad(conversationId, chatHelpers.getMessages, index, !isLoading);
 
-  const methods = useForm<ChatFormValues>({
-    defaultValues: { text: '' },
-  });
-
   let content: JSX.Element | null | undefined;
   const isLandingPage =
     (!messagesTree || messagesTree.length === 0) &&
@@ -85,7 +85,7 @@ function ChatView({ index = 0 }: { index?: number }) {
         <AddedChatContext.Provider value={addedChatHelpers}>
           <Presentation>
             <div className="relative flex h-full w-full flex-col">
-              {!isLoading && <Header />}
+              <Header />
               <>
                 <div
                   className={cn(
