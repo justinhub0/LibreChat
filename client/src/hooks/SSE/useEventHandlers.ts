@@ -34,7 +34,7 @@ import {
   removeConvoFromAllQueries,
   findConversationInInfinite,
 } from '~/utils';
-import { queueTitleGeneration } from '~/data-provider/SSE/queries';
+import { startupConfigKey, queueTitleGeneration } from '~/data-provider';
 import useAttachmentHandler from '~/hooks/SSE/useAttachmentHandler';
 import useContentHandler from '~/hooks/SSE/useContentHandler';
 import useStepHandler from '~/hooks/SSE/useStepHandler';
@@ -410,7 +410,7 @@ export default function useEventHandlers({
           sourceId: submission.conversation?.conversationId,
           ephemeralAgent: submission.ephemeralAgent,
           specName: submission.conversation?.spec,
-          startupConfig: queryClient.getQueryData<TStartupConfig>([QueryKeys.startupConfig]),
+          startupConfig: queryClient.getQueryData<TStartupConfig>(startupConfigKey(true)),
         });
       }
 
@@ -615,7 +615,7 @@ export default function useEventHandlers({
               sourceId: submissionConvo.conversationId,
               ephemeralAgent: submission.ephemeralAgent,
               specName: submission.conversation?.spec,
-              startupConfig: queryClient.getQueryData<TStartupConfig>([QueryKeys.startupConfig]),
+              startupConfig: queryClient.getQueryData<TStartupConfig>(startupConfigKey(true)),
             });
           }
 
