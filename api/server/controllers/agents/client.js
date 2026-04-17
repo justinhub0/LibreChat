@@ -27,6 +27,7 @@ const {
   loadAgent: loadAgentFn,
   createMultiAgentMapper,
   filterMalformedContentParts,
+  Tokenizer,
   transformYouTubeContent,
   countFormattedMessageTokens,
   hydrateMissingIndexTokenCounts,
@@ -1288,6 +1289,10 @@ class AgentClient extends BaseClient {
       return 'claude';
     }
     return 'o200k_base';
+  }
+
+  getTokenCount(text) {
+    return Tokenizer.getTokenCount(text, this.getEncoding());
   }
 }
 
